@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/settings.html" class="admin-nav-link active"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)"><a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar"><div class="admin-page-title">⚙️ Ministry Settings</div><button class="btn btn-primary btn-sm" onclick="saveSettings()">💾 Save All Changes</button></header>
+    <div class="admin-content" style="max-width:750px">
+
+      <!-- MINISTRY INFO -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:20px">🏛️ Ministry Information</div>
+        <div class="form-group"><label class="form-label">Ministry Name</label><input class="form-control" id="sMinistryName" placeholder="Ministry name"></div>
+        <div class="form-group"><label class="form-label">Lead Steward / Pastor Name</label><input class="form-control" id="sLeaderName" placeholder="e.g. Joseph Omikunle"></div>
+        <div class="form-group"><label class="form-label">Ministry Email</label><input type="email" class="form-control" id="sEmail" placeholder="info@yourministry.org"></div>
+        <div class="form-group"><label class="form-label">Ministry Phone</label><input class="form-control" id="sPhone" placeholder="Contact phone number"></div>
+        <div class="form-group"><label class="form-label">Location / Address</label><textarea class="form-control" id="sAddress" rows="2"></textarea></div>
+        <div class="form-group"><label class="form-label">About the Ministry</label><textarea class="form-control" id="sAbout" rows="4" placeholder="Brief description of the ministry..."></textarea></div>
+      </div>
+
+      <!-- PAYSTACK CONFIG -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:8px">💳 Paystack Configuration</div>
+        <div class="alert alert-warning" style="margin-bottom:16px">⚠️ Paystack keys are set in the server .env file. The public key below is stored in the DB and injected into the giving page automatically.</div>
+        <div class="form-group"><label class="form-label">Paystack Public Key</label><input class="form-control" id="sPaystackKey" placeholder="pk_live_xxxxxxxxxxxxx"></div>
+      </div>
+
+      <!-- REGISTRATION SETTINGS -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:20px">🔐 Registration Settings</div>
+        <label style="display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="sRequireApproval" checked>
+          <div><div style="font-weight:600">Require Admin Approval for New Members</div><div style="font-size:12px;color:var(--gray-500)">New registrations await admin approval before accessing the member portal</div></div>
+        </label>
+        <label style="display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="sAllowRegistration" checked>
+          <div><div style="font-weight:600">Allow New Registrations</div><div style="font-size:12px;color:var(--gray-500)">Uncheck to temporarily close registrations</div></div>
+        </label>
+      </div>
+
+      <!-- DEVOTIONAL SETTINGS -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:20px">📖 Daily Devotional Settings</div>
+        <div class="form-group"><label class="form-label">Auto-send devotional at (daily)</label><input type="time" class="form-control" id="sDevotionalTime" value="06:00"></div>
+        <label style="display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="sSendDevotionalEmail">
+          <div><div style="font-weight:600">Email daily devotional to all members</div><div style="font-size:12px;color:var(--gray-500)">Requires SMTP to be configured in .env</div></div>
+        </label>
+      </div>
+
+      <!-- BIRTHDAY AUTO-CELEBRATE -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:20px">🎂 Birthday Settings</div>
+        <label style="display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="sBirthdayCelebrate" checked>
+          <div><div style="font-weight:600">Auto-celebrate member birthdays</div><div style="font-size:12px;color:var(--gray-500)">Automatically posts a birthday card on the celebrations page</div></div>
+        </label>
+        <label style="display:flex;align-items:center;gap:12px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="sBirthdayNotify" checked>
+          <div><div style="font-weight:600">Notify all members of birthdays</div><div style="font-size:12px;color:var(--gray-500)">Sends notification to all members to wish the celebrant</div></div>
+        </label>
+      </div>
+
+      <!-- CHANGE ADMIN PASSWORD -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom:20px">🔑 Change Admin Password</div>
+        <div class="form-group"><label class="form-label">Current Password</label><input type="password" class="form-control" id="oldPass"></div>
+        <div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-control" id="newPass"></div>
+        <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" class="form-control" id="confirmPass"></div>
+        <button class="btn btn-primary" onclick="changePassword()">Change Password 🔑</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadSettings();
+}
+async function loadSettings() {
+  try {
+    const res = await API.get('/admin/settings');
+    if (res?.settings) {
+      const s = res.settings;
+      if (s.ministry_name) document.getElementById('sMinistryName').value = s.ministry_name;
+      if (s.leader_name) document.getElementById('sLeaderName').value = s.leader_name;
+      if (s.contact_email) document.getElementById('sEmail').value = s.contact_email;
+      if (s.contact_phone) document.getElementById('sPhone').value = s.contact_phone;
+      if (s.address) document.getElementById('sAddress').value = s.address;
+      if (s.about) document.getElementById('sAbout').value = s.about;
+      if (s.paystack_public_key) document.getElementById('sPaystackKey').value = s.paystack_public_key;
+      document.getElementById('sRequireApproval').checked = s.require_approval !== false;
+      document.getElementById('sAllowRegistration').checked = s.allow_registration !== false;
+      document.getElementById('sBirthdayCelebrate').checked = s.auto_celebrate_birthday !== false;
+      document.getElementById('sBirthdayNotify').checked = s.notify_birthday !== false;
+      if (s.devotional_time) document.getElementById('sDevotionalTime').value = s.devotional_time;
+    }
+  } catch(e) {}
+}
+async function saveSettings() {
+  const data = {
+    ministry_name: document.getElementById('sMinistryName').value,
+    leader_name: document.getElementById('sLeaderName').value,
+    contact_email: document.getElementById('sEmail').value,
+    contact_phone: document.getElementById('sPhone').value,
+    address: document.getElementById('sAddress').value,
+    about: document.getElementById('sAbout').value,
+    paystack_public_key: document.getElementById('sPaystackKey').value,
+    require_approval: document.getElementById('sRequireApproval').checked,
+    allow_registration: document.getElementById('sAllowRegistration').checked,
+    auto_celebrate_birthday: document.getElementById('sBirthdayCelebrate').checked,
+    notify_birthday: document.getElementById('sBirthdayNotify').checked,
+    devotional_time: document.getElementById('sDevotionalTime').value,
+    send_devotional_email: document.getElementById('sSendDevotionalEmail').checked,
+  };
+  const res = await API.put('/admin/settings', data);
+  if (res?.success) Toast.success('Settings saved successfully! ✅');
+  else Toast.error(res?.message || 'Error saving settings');
+}
+async function changePassword() {
+  const oldPass = document.getElementById('oldPass').value;
+  const newPass = document.getElementById('newPass').value;
+  const confirmPass = document.getElementById('confirmPass').value;
+  if (!oldPass || !newPass) return Toast.error('Please fill in all password fields');
+  if (newPass !== confirmPass) return Toast.error('New passwords do not match');
+  if (newPass.length < 8) return Toast.error('Password must be at least 8 characters');
+  const res = await API.put('/auth/change-password', { old_password: oldPass, new_password: newPass });
+  if (res?.success) { Toast.success('Password changed! 🔑'); document.getElementById('oldPass').value = ''; document.getElementById('newPass').value = ''; document.getElementById('confirmPass').value = ''; }
+  else Toast.error(res?.message || 'Error changing password');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

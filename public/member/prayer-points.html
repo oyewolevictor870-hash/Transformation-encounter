@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prayer Points | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/prayer-requests.html" class="sidebar-link"><span class="icon">🙏</span> Prayer Requests</a>
+      <a href="/member/prayer-points.html" class="sidebar-link active"><span class="icon">📌</span> Prayer Points</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">📌 Daily Prayer Points</div></div>
+    </header>
+    <div class="content-area">
+      <!-- TODAY'S PRAYER POINTS -->
+      <div class="card" id="todayPrayerPoints" style="border-top:4px solid var(--gold);margin-bottom:24px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold-dark);margin-bottom:8px">📅 Today's Prayer Focus</div>
+        <div id="todayPointsContent"><div class="flex-center" style="padding:24px"><div class="spinner"></div></div></div>
+      </div>
+      <!-- ARCHIVES -->
+      <div class="card-title" style="margin-bottom:16px">📋 Previous Prayer Points</div>
+      <div id="archiveList"><div class="flex-center" style="padding:40px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  const user = Utils.requireAuth();
+  if (!user) return;
+  document.getElementById('sidebarName').textContent = user.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(user.full_name);
+  loadToday(); loadArchive();
+}
+async function loadToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  const res = await API.get(`/misc/prayer-points?date=${today}`);
+  const container = document.getElementById('todayPointsContent');
+  if (res?.prayer_points) {
+    const pp = res.prayer_points;
+    container.innerHTML = `<div style="font-weight:800;font-size:20px;color:var(--primary);margin-bottom:12px">${pp.title}</div>
+      <div style="font-size:14px;color:var(--gray-700);line-height:2;white-space:pre-line;margin-bottom:16px">${pp.points}</div>
+      ${pp.scripture ? `<div style="background:rgba(245,166,35,0.1);border-left:4px solid var(--gold);padding:12px;border-radius:0 8px 8px 0;font-style:italic;font-size:13px;color:var(--gray-700)">📖 ${pp.scripture}</div>` : ''}`;
+  } else {
+    container.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px"><div style="font-size:32px;margin-bottom:8px">📌</div>No prayer points for today yet. Check back later!</div>';
+  }
+}
+async function loadArchive() {
+  const res = await API.get('/misc/prayer-points/archive');
+  const container = document.getElementById('archiveList');
+  if (!res?.prayer_points?.length) { container.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px">No archived prayer points yet</div>'; return; }
+  container.innerHTML = res.prayer_points.map(pp => `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="font-weight:700;color:var(--primary)">${pp.title}</div>
+        <div style="font-size:12px;color:var(--gray-500)">${Utils.formatDate(pp.date)}</div>
+      </div>
+      <div style="font-size:13px;color:var(--gray-700);line-height:1.8;white-space:pre-line">${pp.points.slice(0,200)}${pp.points.length>200?'...':''}</div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="toggleFull(this,'${encodeURIComponent(pp.points)}')">Read Full →</button>
+    </div>`).join('');
+}
+function toggleFull(btn, encodedPoints) {
+  const parent = btn.parentElement;
+  const div = parent.querySelector('[data-full]') || (() => {
+    const d = document.createElement('div'); d.dataset.full = '1'; d.style.cssText = 'font-size:13px;color:var(--gray-700);line-height:2;white-space:pre-line;margin-top:8px;padding:12px;background:var(--gray-50);border-radius:8px';
+    d.textContent = decodeURIComponent(encodedPoints); btn.before(d); return d; })();
+  if (div.style.display === 'none') { div.style.display = 'block'; btn.textContent = 'Collapse ↑'; }
+  else { div.style.display = 'none'; btn.textContent = 'Read Full →'; }
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

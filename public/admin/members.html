@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Members | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link active"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+        <div class="admin-page-title">Members Management</div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search members..." style="width:250px" oninput="loadMembers()">
+        <select class="form-control" id="roleFilter" style="width:130px" onchange="loadMembers()">
+          <option value="">All Roles</option>
+          <option value="member">Member</option>
+          <option value="worker">Worker</option>
+          <option value="admin">Admin</option>
+        </select>
+        <select class="form-control" id="statusFilter" style="width:130px" onchange="loadMembers()">
+          <option value="">All Status</option>
+          <option value="active" selected>Active</option>
+          <option value="pending">Pending</option>
+          <option value="suspended">Suspended</option>
+        </select>
+      </div>
+    </header>
+    <div class="admin-content">
+      <div id="memberCount" style="font-size:14px;color:var(--gray-500);margin-bottom:16px">Loading...</div>
+      <div class="admin-table-wrapper">
+        <div id="membersTable"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROLE CHANGE MODAL -->
+<div class="modal-overlay" id="roleModal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header"><div class="modal-title">🎖️ Change Member Role</div><button class="modal-close">✕</button></div>
+    <div style="margin-bottom:16px">Changing role for: <strong id="roleMemberName"></strong></div>
+    <div class="form-group">
+      <label class="form-label">New Role</label>
+      <select class="form-control" id="newRole">
+        <option value="member">Member</option>
+        <option value="worker">Worker</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-outline" onclick="Modal.close('roleModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="confirmRoleChange()">Change Role</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let adminUser = null;
+let selectedMemberId = null;
+
+async function init() {
+  adminUser = await Utils.requireRole(['admin']);
+  if (!adminUser) return;
+  loadMembers();
+}
+
+async function loadMembers() {
+  const search = document.getElementById('searchInput').value;
+  const role = document.getElementById('roleFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const container = document.getElementById('membersTable');
+  container.innerHTML = '<div class="flex-center" style="padding:40px"><div class="spinner"></div></div>';
+  try {
+    const params = {};
+    if (search) params.search = search;
+    if (role) params.role = role;
+    if (status) params.status = status;
+    const res = await API.getAllMembers(params);
+    const members = res?.members || [];
+    document.getElementById('memberCount').textContent = `Showing ${members.length} member(s)`;
+    if (!members.length) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-500)">No members found</div>'; return; }
+    container.innerHTML = `<table class="admin-table">
+      <thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Department</th><th>Joined</th><th>Actions</th></tr></thead>
+      <tbody>${members.map(m => `<tr>
+        <td><div class="member-info">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${Utils.initials(m.full_name)}</div>
+          <div><div class="member-name">${m.full_name}</div><div class="member-email">${m.email}</div></div>
+        </div></td>
+        <td><span class="role-badge ${m.role}">${m.role}</span></td>
+        <td><span class="status-dot ${m.status}"></span> ${m.status}</td>
+        <td>${m.department || '—'}</td>
+        <td>${Utils.formatDate(m.created_at)}</td>
+        <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="openRoleModal('${m.id}','${m.full_name}','${m.role}')">🎖️ Role</button>
+          ${m.status !== 'suspended' ? `<button class="btn btn-sm" style="background:var(--warning);color:white" onclick="suspend('${m.id}','${m.full_name}')">⚠️ Suspend</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="remove('${m.id}','${m.full_name}')">🗑️ Remove</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading members</div>'; }
+}
+
+function openRoleModal(id, name, currentRole) {
+  selectedMemberId = id;
+  document.getElementById('roleMemberName').textContent = name;
+  document.getElementById('newRole').value = currentRole;
+  Modal.open('roleModal');
+}
+
+async function confirmRoleChange() {
+  const role = document.getElementById('newRole').value;
+  const res = await API.changeRole(selectedMemberId, role);
+  if (res?.success) { Toast.success(res.message); Modal.close('roleModal'); loadMembers(); }
+  else Toast.error(res?.message || 'Error');
+}
+
+async function suspend(id, name) {
+  if (!confirm(`Suspend ${name}? They will lose access until reinstated.`)) return;
+  const res = await API.put(`/admin/suspend/${id}`);
+  if (res?.success) { Toast.success(`${name} suspended.`); loadMembers(); }
+  else Toast.error(res?.message || 'Error');
+}
+
+async function remove(id, name) {
+  if (!confirm(`⚠️ PERMANENTLY remove ${name}? This cannot be undone.`)) return;
+  const res = await API.removeMember(id);
+  if (res?.success) { Toast.success(`${name} removed.`); loadMembers(); }
+  else Toast.error(res?.message || 'Error');
+}
+
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

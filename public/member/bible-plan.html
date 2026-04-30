@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bible Reading Plan | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/bible-plan.html" class="sidebar-link active"><span class="icon">📖</span> Bible Plan</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">📖 Bible Reading Plan</div></div>
+      <div id="createPlanBtn" style="display:none"><button class="btn btn-primary btn-sm" onclick="Modal.open('planModal')">+ Create Plan</button></div>
+    </header>
+    <div class="content-area">
+      <!-- Today's Reading Card -->
+      <div class="card" id="todayCard" style="background:linear-gradient(135deg,var(--primary) 0%,#4a2d8a 100%);color:white;margin-bottom:24px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.7;margin-bottom:8px">📅 Today's Reading</div>
+        <div style="font-size:24px;font-weight:900;margin-bottom:8px" id="todayRef">Loading...</div>
+        <div style="font-size:14px;opacity:0.8;line-height:1.6" id="todayRef2"></div>
+        <div style="display:flex;gap:12px;margin-top:16px">
+          <button class="btn btn-gold btn-sm" onclick="markRead()">✅ Mark as Read</button>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white" onclick="showNotes()">📝 Add Notes</button>
+        </div>
+      </div>
+
+      <!-- PLAN LIST -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="loadPlans('active',this)">Active Plans</button>
+        <button class="tab-btn" onclick="loadPlans('completed',this)">Completed</button>
+        <button class="tab-btn" onclick="loadReadingHistory(this)">My Progress</button>
+      </div>
+      <div id="plansContainer"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTES MODAL -->
+<div class="modal-overlay" id="notesModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📝 Reading Notes</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Notes on today's reading</label><textarea class="form-control" id="readingNotes" rows="5" placeholder="Write reflections, insights, or things that stood out..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="saveNotes()">Save Notes 📝</button>
+  </div>
+</div>
+
+<!-- CREATE PLAN MODAL (Workers/Admins) -->
+<div class="modal-overlay" id="planModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📖 Create Reading Plan</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Plan Title *</label><input class="form-control" id="pTitle" placeholder="e.g. New Testament in 90 Days"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="pDesc" rows="2"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Start Date</label><input type="date" class="form-control" id="pStart"></div>
+      <div class="form-group"><label class="form-label">End Date</label><input type="date" class="form-control" id="pEnd"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Daily Readings (one per line, e.g. Genesis 1-2)</label><textarea class="form-control" id="pReadings" rows="8" placeholder="Genesis 1-2&#10;Genesis 3-5&#10;Genesis 6-8&#10;..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="createPlan()">Create Plan 📖</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null; let todayPlanId = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  if (['worker','admin'].includes(currentUser.role)) document.getElementById('createPlanBtn').style.display = 'block';
+  loadTodayReading();
+  loadPlans('active', null);
+}
+async function loadTodayReading() {
+  const res = await API.getTodayReading();
+  if (res?.reading) {
+    document.getElementById('todayRef').textContent = res.reading.reference;
+    document.getElementById('todayRef2').textContent = res.reading.secondary_reference || '';
+    todayPlanId = res.reading.plan_id;
+  } else {
+    document.getElementById('todayRef').textContent = 'No reading plan enrolled';
+    document.getElementById('todayRef2').textContent = 'Enroll in a reading plan below to get started!';
+  }
+}
+async function loadPlans(status, btn) {
+  if (btn) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  const container = document.getElementById('plansContainer');
+  container.innerHTML = '<div class="flex-center" style="padding:40px"><div class="spinner"></div></div>';
+  try {
+    const res = await API.getBiblePlans(status);
+    if (!res?.plans?.length) { container.innerHTML = `<div class="empty-state"><div class="icon">📖</div><h3>No ${status} plans</h3></div>`; return; }
+    container.innerHTML = res.plans.map(p => `<div class="card" style="margin-bottom:16px">
+      <div style="font-weight:700;color:var(--primary);font-size:16px;margin-bottom:4px">${p.title}</div>
+      <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px">📅 ${Utils.formatDate(p.start_date)} - ${Utils.formatDate(p.end_date)} • ${p.total_days} days</div>
+      ${p.description ? `<div style="font-size:13px;color:var(--gray-700);margin-bottom:12px;line-height:1.5">${p.description}</div>` : ''}
+      <div style="display:flex;gap:12px;align-items:center">
+        <span style="font-size:13px;color:var(--gray-500)">👥 ${p.enrolled_count || 0} enrolled</span>
+        <button class="btn btn-primary btn-sm" onclick="enroll('${p.id}',this)">📖 Enroll</button>
+      </div>
+    </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading</h3></div>'; }
+}
+async function loadReadingHistory(btn) {
+  if (btn) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  const container = document.getElementById('plansContainer');
+  try {
+    const res = await API.get('/misc/bible-plan/progress');
+    if (!res?.progress?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><h3>No reading history yet</h3></div>'; return; }
+    container.innerHTML = `<div style="font-size:14px;color:var(--gray-700);line-height:2">${res.progress.map(p => `<div style="padding:8px 0;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between"><span>📖 ${p.reference}</span><span style="color:var(--success)">✅ ${Utils.formatDate(p.read_at)}</span></div>`).join('')}</div>`;
+  } catch(e) {}
+}
+async function enroll(planId, btn) {
+  const res = await API.post(`/misc/bible-plan/${planId}/enroll`);
+  if (res?.success) { Toast.success('Enrolled! 📖 Happy reading!'); btn.textContent = '✅ Enrolled'; btn.disabled = true; loadTodayReading(); }
+  else Toast.error(res?.message || 'Error enrolling');
+}
+async function markRead() {
+  if (!todayPlanId) return Toast.error('Enroll in a reading plan first');
+  const res = await API.post('/misc/bible-plan/mark-read', { plan_id: todayPlanId, notes: '' });
+  if (res?.success) Toast.success('Day marked as complete! 🙌 Great job!');
+  else Toast.error(res?.message || 'Error');
+}
+function showNotes() { Modal.open('notesModal'); }
+async function saveNotes() {
+  const notes = document.getElementById('readingNotes').value;
+  if (!todayPlanId) return Toast.error('Enroll in a reading plan first');
+  const res = await API.post('/misc/bible-plan/mark-read', { plan_id: todayPlanId, notes });
+  if (res?.success) { Toast.success('Notes saved!'); Modal.close('notesModal'); }
+  else Toast.error(res?.message || 'Error');
+}
+async function createPlan() {
+  const readings = document.getElementById('pReadings').value.trim().split('\n').filter(Boolean);
+  const res = await API.post('/misc/bible-plan', { title: document.getElementById('pTitle').value, description: document.getElementById('pDesc').value, start_date: document.getElementById('pStart').value, end_date: document.getElementById('pEnd').value, readings });
+  if (res?.success) { Toast.success('Reading plan created! 📖'); Modal.close('planModal'); loadPlans('active', null); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Prayers | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div><div class="sidebar-role-badge">Workers</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/post-content.html" class="sidebar-link"><span class="icon">✏️</span> Post Content</a>
+      <a href="/member/approve-testimonies.html" class="sidebar-link"><span class="icon">✅</span> Approve Testimonies</a>
+      <a href="/member/manage-prayers.html" class="sidebar-link active"><span class="icon">⚙️</span> Manage Prayers</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">⚙️ Manage Prayer Requests</div></div>
+    </header>
+    <div class="content-area">
+      <div class="alert alert-info">As a worker, you can add prayer responses, mark prayers as answered, and manage the prayer wall.</div>
+      <div id="prayersList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESPOND MODAL -->
+<div class="modal-overlay" id="respondModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🙏 Respond to Prayer Request</div><button class="modal-close">✕</button></div>
+    <div id="prayerContext" style="background:var(--gray-100);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--gray-700)"></div>
+    <div class="form-group"><label class="form-label">Prayer Response / Encouragement *</label><textarea class="form-control" id="responseText" rows="4" placeholder="Pray the Word over this request, share encouragement..."></textarea></div>
+    <input type="hidden" id="responsePrayerId">
+    <button class="btn btn-primary btn-block" onclick="submitResponse()">Send Response 🙏</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireRole(['worker','admin']);
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  loadPrayers();
+}
+async function loadPrayers() {
+  const container = document.getElementById('prayersList');
+  try {
+    const res = await API.getPrayers({ all: true });
+    if (!res?.prayers?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">🙏</div><h3>No prayer requests</h3></div>'; return; }
+    container.innerHTML = res.prayers.map(p => `<div class="card" style="margin-bottom:16px;border-left:3px solid ${p.is_answered?'var(--success)':'var(--primary)'}">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:15px;color:var(--primary)">${p.title}</div>
+          <div style="font-size:12px;color:var(--gray-500);margin-top:2px">${p.is_anonymous?'👤 Anonymous':p.full_name} • ${Utils.timeAgo(p.created_at)} • <span class="badge badge-${p.category==='urgent'?'danger':'primary'}">${p.category}</span> ${p.is_answered?'• <span class="badge badge-success">✅ Answered</span>':''}</div>
+          <div style="font-size:13px;color:var(--gray-700);margin-top:8px;line-height:1.6">${p.content}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--gray-100);padding-top:10px">
+        <button class="btn btn-primary btn-sm" onclick="openRespond('${p.id}','${encodeURIComponent(p.title)}','${encodeURIComponent(p.content)}')">✍️ Respond</button>
+        ${!p.is_answered ? `<button class="btn btn-sm" style="background:var(--success);color:white" onclick="markAnswered('${p.id}')">✅ Mark Answered</button>` : ''}
+        <button class="btn btn-outline btn-sm" onclick="viewResponses('${p.id}')">💬 Responses (${p.response_count||0})</button>
+      </div>
+      <div id="responses-${p.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100)"></div>
+    </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading</h3></div>'; }
+}
+function openRespond(id, title, content) {
+  document.getElementById('responsePrayerId').value = id;
+  document.getElementById('prayerContext').innerHTML = `<strong>Request:</strong> ${decodeURIComponent(title)}<br>${decodeURIComponent(content)}`;
+  document.getElementById('responseText').value = '';
+  Modal.open('respondModal');
+}
+async function submitResponse() {
+  const content = document.getElementById('responseText').value.trim();
+  const id = document.getElementById('responsePrayerId').value;
+  if (!content) return Toast.error('Please write a response');
+  const res = await API.respondToPrayer(id, content);
+  if (res?.success) { Toast.success('Response sent! 🙏'); Modal.close('respondModal'); loadPrayers(); }
+  else Toast.error(res?.message || 'Error');
+}
+async function markAnswered(id) {
+  if (!confirm('Mark this prayer as answered?')) return;
+  const res = await API.markPrayerAnswered(id);
+  if (res?.success) { Toast.success('Praise God! Marked as answered! 🙌'); loadPrayers(); }
+  else Toast.error(res?.message || 'Error');
+}
+async function viewResponses(id) {
+  const box = document.getElementById(`responses-${id}`);
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="flex-center" style="padding:12px"><div class="spinner"></div></div>';
+  const res = await API.get(`/prayers/${id}/responses`);
+  if (!res?.responses?.length) { box.innerHTML = '<div style="text-align:center;color:var(--gray-500);font-size:12px">No responses yet</div>'; return; }
+  box.innerHTML = res.responses.map(r => `<div style="padding:8px;background:var(--gray-100);border-radius:6px;margin-bottom:6px;font-size:12px"><strong>${r.full_name}</strong> <span style="color:var(--gray-500)">${Utils.timeAgo(r.created_at)}</span><div style="margin-top:4px;color:var(--gray-700)">${r.content}</div></div>`).join('');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

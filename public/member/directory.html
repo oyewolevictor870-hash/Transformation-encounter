@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Member Directory | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/directory.html" class="sidebar-link active"><span class="icon">👥</span> Directory</a>
+      <a href="/member/celebrations.html" class="sidebar-link"><span class="icon">🎂</span> Celebrations</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">👥 Member Directory</div></div>
+    </header>
+    <div class="content-area">
+      <input type="text" class="form-control" id="dirSearch" placeholder="🔍 Search members by name..." style="margin-bottom:20px" oninput="loadDirectory()">
+      <div id="memberCount" style="font-size:13px;color:var(--gray-500);margin-bottom:16px"></div>
+      <div id="directoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+        <div class="flex-center" style="padding:60px;grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  const user = Utils.requireAuth();
+  if (!user) return;
+  document.getElementById('sidebarName').textContent = user.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(user.full_name);
+  loadDirectory();
+}
+async function loadDirectory() {
+  const search = document.getElementById('dirSearch').value;
+  const container = document.getElementById('directoryGrid');
+  try {
+    const res = await API.getDirectory(search);
+    const members = res?.members || [];
+    document.getElementById('memberCount').textContent = `${members.length} member(s)`;
+    if (!members.length) { container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">👥</div><h3>No members found</h3></div>'; return; }
+    container.innerHTML = members.map(m => `
+      <div class="card" style="text-align:center;padding:20px">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin:0 auto 12px;overflow:hidden">
+          ${m.profile_photo ? `<img src="${m.profile_photo}" style="width:100%;height:100%;object-fit:cover">` : Utils.initials(m.full_name)}
+        </div>
+        <div style="font-weight:700;color:var(--primary);font-size:14px">${m.full_name}</div>
+        <div style="font-size:11px;color:var(--gold-dark);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:4px 0">${m.role}</div>
+        ${m.department ? `<div style="font-size:12px;color:var(--gray-500)">${m.department}</div>` : ''}
+        ${m.bio ? `<div style="font-size:12px;color:var(--gray-700);margin-top:8px;line-height:1.4">${m.bio.slice(0,80)}${m.bio.length>80?'...':''}</div>` : ''}
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚠️</div><h3>Error loading directory</h3></div>'; }
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

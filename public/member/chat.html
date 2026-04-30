@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group Chat | Transformation Encounter</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/member.css">
+  <style>
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .main-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 64px);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div
+            style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">
+            🔥</div>
+          <div>
+            <div class="sidebar-title">TEG</div>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-user">
+        <div id="sidebarAvatar"
+          style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">
+          ?</div>
+        <div>
+          <div class="sidebar-username" id="sidebarName">Loading...</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+        <a href="/member/prayer-requests.html" class="sidebar-link"><span class="icon">🙏</span> Prayer Requests</a>
+        <a href="/member/testimonies.html" class="sidebar-link"><span class="icon">✨</span> Testimonies</a>
+        <a href="/member/events.html" class="sidebar-link"><span class="icon">📅</span> Events</a>
+        <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+        <a href="/member/chat.html" class="sidebar-link active"><span class="icon">💬</span> Group Chat</a>
+        <a href="/member/giving.html" class="sidebar-link"><span class="icon">💰</span> Giving & Dues</a>
+      </nav>
+      <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign
+          Out</a></div>
+    </aside>
+    <div class="main-content">
+      <header class="top-bar">
+        <div class="top-bar-left"><button class="menu-toggle"
+            onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+          <div class="page-title">💬 Group Chat — General</div>
+        </div>
+        <div class="top-bar-right"><span id="onlineCount" style="font-size:12px;color:var(--success);font-weight:600">●
+            Online</span></div>
+      </header>
+      <div class="content-area">
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="flex-center" style="padding:40px">
+              <div class="spinner"></div>
+            </div>
+          </div>
+          <div class="chat-input-bar">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Type a message... (press Enter to send)"
+              maxlength="500"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}">
+            <button class="chat-send-btn" onclick="sendMessage()" title="Send">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let currentUser = null;
+    let socket = null;
+    const room = 'general';
+
+    async function init() {
+      currentUser = Utils.requireAuth();
+      if (!currentUser) return;
+      document.getElementById('sidebarName').textContent = currentUser.full_name;
+      document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+
+      await loadHistory();
+
+      socket = io();
+      socket.emit('user:join', currentUser.id);
+      socket.emit('chat:join', room);
+
+      socket.on('chat:message', (msg) => {
+        appendMessage(msg, msg.user_id === currentUser.id);
+        scrollBottom();
+      });
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await API.get('/feed/chat/general?limit=50');
+        const container = document.getElementById('chatMessages');
+        if (res?.messages?.length) {
+          container.innerHTML = res.messages.map(m => buildBubble(m, m.user_id === currentUser?.id)).join('');
+        } else {
+          container.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:40px;font-size:14px">No messages yet. Say hello! 👋</div>';
+        }
+        scrollBottom();
+      } catch (e) {
+        document.getElementById('chatMessages').innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:40px">Could not load messages</div>';
+      }
+    }
+
+    function buildBubble(msg, isOwn) {
+      const initials = Utils.initials(msg.full_name || 'ME');
+      return `<div class="chat-message ${isOwn ? 'own' : ''}">
+    ${!isOwn ? `<div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0">${initials}</div>` : ''}
+    <div class="chat-bubble">
+      ${!isOwn ? `<div class="chat-sender">${msg.full_name}</div>` : ''}
+      <div class="chat-text">${escHtml(msg.content)}</div>
+      <div class="chat-time">${Utils.timeAgo(msg.created_at)}</div>
+    </div>
+  </div>`;
+    }
+
+    function appendMessage(msg, isOwn) {
+      const container = document.getElementById('chatMessages');
+      const empty = container.querySelector('[style*="No messages"]');
+      if (empty) empty.remove();
+      container.insertAdjacentHTML('beforeend', buildBubble(msg, isOwn));
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const content = input.value.trim();
+      if (!content || !socket) return;
+      socket.emit('chat:message', { userId: currentUser.id, content, room });
+      input.value = '';
+    }
+
+    function scrollBottom() {
+      const c = document.getElementById('chatMessages');
+      c.scrollTop = c.scrollHeight;
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function logout() { API.clearSession(); window.location.href = '/login.html'; }
+    init();
+  </script>
+</body>
+
+</html>

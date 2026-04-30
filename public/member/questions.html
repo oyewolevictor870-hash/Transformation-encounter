@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Questions & Answers | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/questions.html" class="sidebar-link active"><span class="icon">❓</span> Questions</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">❓ Questions & Answers</div></div>
+      <div class="top-bar-right"><button class="btn btn-primary btn-sm" onclick="Modal.open('askModal')">Ask a Question</button></div>
+    </header>
+    <div class="content-area">
+      <div class="alert alert-info" style="margin-bottom:20px">💡 Ask spiritual questions and receive answers from our workers and leaders. Questions can be submitted anonymously.</div>
+      <div id="questionsList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ASK MODAL -->
+<div class="modal-overlay" id="askModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">❓ Ask a Question</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Question Title *</label><input class="form-control" id="qTitle" placeholder="Brief title of your question"></div>
+    <div class="form-group"><label class="form-label">Details</label><textarea class="form-control" id="qContent" rows="4" placeholder="Provide more context for your question..."></textarea></div>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:14px"><input type="checkbox" id="qAnon"> Submit anonymously</label>
+    <button class="btn btn-primary btn-block" onclick="askQuestion()">Submit Question ❓</button>
+  </div>
+</div>
+
+<!-- ANSWER MODAL -->
+<div class="modal-overlay" id="answerModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">💡 Provide an Answer</div><button class="modal-close">✕</button></div>
+    <div id="questionContext" style="background:var(--gray-100);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--gray-700)"></div>
+    <div class="form-group"><label class="form-label">Your Answer *</label><textarea class="form-control" id="answerContent" rows="5" placeholder="Provide a thoughtful, scripture-based answer..."></textarea></div>
+    <input type="hidden" id="answerQuestionId">
+    <button class="btn btn-primary btn-block" onclick="submitAnswer()">Post Answer 💡</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  loadQuestions();
+}
+async function loadQuestions() {
+  const container = document.getElementById('questionsList');
+  try {
+    const res = await API.getQuestions();
+    if (!res?.questions?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">❓</div><h3>No questions yet</h3><p>Be the first to ask a spiritual question!</p></div>'; return; }
+    container.innerHTML = res.questions.map(q => `
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+          <div style="font-size:28px">❓</div>
+          <div style="flex:1">
+            <div style="font-weight:700;color:var(--primary);font-size:16px;margin-bottom:4px">${q.title}</div>
+            <div style="font-size:13px;color:var(--gray-500)">${q.is_anonymous ? '👤 Anonymous' : (q.asker_name || 'Member')} • ${Utils.timeAgo(q.created_at)}</div>
+            ${q.content ? `<div style="font-size:14px;color:var(--gray-700);margin-top:8px;line-height:1.6">${q.content}</div>` : ''}
+          </div>
+          <span class="badge badge-${q.answer_count > 0 ? 'success' : 'warning'}">${q.answer_count || 0} answer${q.answer_count !== 1 ? 's' : ''}</span>
+        </div>
+        <div style="display:flex;gap:8px;border-top:1px solid var(--gray-200);padding-top:12px">
+          <button class="btn btn-outline btn-sm" onclick="viewAnswers('${q.id}','${encodeURIComponent(q.title)}')">💡 View Answers</button>
+          ${['worker','admin'].includes(currentUser?.role) ? `<button class="btn btn-primary btn-sm" onclick="openAnswerModal('${q.id}','${encodeURIComponent(q.title)}','${encodeURIComponent(q.content||'')}')">✍️ Answer</button>` : ''}
+        </div>
+        <div id="answers-${q.id}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100)"></div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading questions</h3></div>'; }
+}
+async function viewAnswers(qId, title) {
+  const box = document.getElementById(`answers-${qId}`);
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.innerHTML = '<div class="flex-center" style="padding:20px"><div class="spinner"></div></div>';
+  box.style.display = 'block';
+  const res = await API.get(`/questions/${qId}`);
+  if (!res?.answers?.length) { box.innerHTML = '<div style="text-align:center;color:var(--gray-500);font-size:13px;padding:12px">No answers yet. Workers/leaders can answer this question.</div>'; return; }
+  box.innerHTML = res.answers.map(a => `<div style="display:flex;gap:10px;margin-bottom:12px">
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--gold));color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${Utils.initials(a.full_name)}</div>
+    <div style="background:var(--gray-100);border-radius:0 12px 12px 12px;padding:10px 14px;flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:4px">${a.full_name} <span class="badge badge-primary" style="font-size:10px">${a.role}</span></div>
+      <div style="font-size:13px;color:var(--gray-700);line-height:1.6">${a.content}</div>
+    </div>
+  </div>`).join('');
+}
+function openAnswerModal(qId, title, content) {
+  document.getElementById('answerQuestionId').value = qId;
+  document.getElementById('questionContext').innerHTML = `<strong>Question:</strong> ${decodeURIComponent(title)}<br><span style="color:var(--gray-500)">${decodeURIComponent(content)}</span>`;
+  document.getElementById('answerContent').value = '';
+  Modal.open('answerModal');
+}
+async function askQuestion() {
+  const title = document.getElementById('qTitle').value.trim();
+  const content = document.getElementById('qContent').value.trim();
+  if (!title) return Toast.error('Please enter a question title');
+  const res = await API.askQuestion({ title, content, is_anonymous: document.getElementById('qAnon').checked });
+  if (res?.success) { Toast.success('Question submitted! 🙏 Leaders will answer soon.'); Modal.close('askModal'); document.getElementById('qTitle').value = ''; document.getElementById('qContent').value = ''; loadQuestions(); }
+  else Toast.error(res?.message || 'Error submitting question');
+}
+async function submitAnswer() {
+  const content = document.getElementById('answerContent').value.trim();
+  const qId = document.getElementById('answerQuestionId').value;
+  if (!content) return Toast.error('Please write an answer');
+  const res = await API.answerQuestion(qId, content);
+  if (res?.success) { Toast.success('Answer posted! 💡'); Modal.close('answerModal'); loadQuestions(); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

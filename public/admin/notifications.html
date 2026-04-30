@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Send Notifications | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link active"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)"><a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar"><div class="admin-page-title">📣 Send Broadcast Notification</div></header>
+    <div class="admin-content">
+      <div class="card" style="max-width:600px;margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:20px">📣 Broadcast to All Members</div>
+        <div class="form-group"><label class="form-label">Notification Type</label>
+          <select class="form-control" id="notifType">
+            <option value="broadcast">📣 Broadcast (General)</option>
+            <option value="event_reminder">📅 Event Reminder</option>
+            <option value="devotional">📖 Devotional</option>
+            <option value="voice_room">📻 Voice Room Open</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Title *</label><input class="form-control" id="notifTitle" placeholder="Notification title"></div>
+        <div class="form-group"><label class="form-label">Message *</label><textarea class="form-control" id="notifMessage" rows="4" placeholder="Notification message..."></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Send To</label>
+          <select class="form-control" id="notifTarget">
+            <option value="all">All Members</option>
+            <option value="members_only">Members Only</option>
+            <option value="workers_and_admin">Workers & Admin Only</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Also send Email? <span style="font-size:11px;color:var(--gray-500)">(requires SMTP configured)</span></label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" id="sendEmail"> Yes, send email to all recipients</label>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="sendNotification()">📣 Send Notification</button>
+      </div>
+
+      <!-- NOTIFICATION HISTORY -->
+      <div class="admin-table-wrapper">
+        <div class="admin-table-header"><div class="admin-table-title">📋 Notification History</div></div>
+        <div id="historyTable"><div class="flex-center" style="padding:40px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadHistory();
+}
+async function sendNotification() {
+  const data = { type: document.getElementById('notifType').value, title: document.getElementById('notifTitle').value.trim(), message: document.getElementById('notifMessage').value.trim(), target: document.getElementById('notifTarget').value, send_email: document.getElementById('sendEmail').checked };
+  if (!data.title || !data.message) return Toast.error('Title and message required');
+  const res = await API.broadcastNotification(data);
+  if (res?.success) { Toast.success(`Notification sent to ${res.count} members! 📣`); document.getElementById('notifTitle').value = ''; document.getElementById('notifMessage').value = ''; loadHistory(); }
+  else Toast.error(res?.message || 'Error sending notification');
+}
+async function loadHistory() {
+  const res = await API.get('/admin/notifications/history');
+  const container = document.getElementById('historyTable');
+  if (!res?.notifications?.length) { container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500)">No notifications sent yet</div>'; return; }
+  container.innerHTML = `<table class="admin-table"><thead><tr><th>Title</th><th>Type</th><th>Sent To</th><th>Date</th><th>Sent By</th></tr></thead><tbody>${res.notifications.map(n => `<tr><td style="font-weight:600">${n.title}</td><td><span class="badge badge-primary">${n.type}</span></td><td>${n.target || 'all'}</td><td>${Utils.formatDateTime(n.created_at)}</td><td>${n.full_name||'Admin'}</td></tr>`).join('')}</tbody></table>`;
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

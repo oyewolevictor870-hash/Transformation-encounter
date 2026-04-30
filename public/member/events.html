@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Events | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div><div class="sidebar-role-badge" id="sidebarRole">Member</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/prayer-requests.html" class="sidebar-link"><span class="icon">🙏</span> Prayer Requests</a>
+      <a href="/member/testimonies.html" class="sidebar-link"><span class="icon">✨</span> Testimonies</a>
+      <a href="/member/events.html" class="sidebar-link active"><span class="icon">📅</span> Events</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+      <a href="/member/chat.html" class="sidebar-link"><span class="icon">💬</span> Group Chat</a>
+      <a href="/member/giving.html" class="sidebar-link"><span class="icon">💰</span> Giving & Dues</a>
+      <a href="/member/celebrations.html" class="sidebar-link"><span class="icon">🎂</span> Celebrations</a>
+      <a href="/member/directory.html" class="sidebar-link"><span class="icon">👥</span> Directory</a>
+    </nav>
+    <div class="sidebar-footer"><a href="/member/profile.html" class="sidebar-link"><span class="icon">👤</span> My Profile</a><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">📅 Events</div></div>
+      <div class="top-bar-right" id="createEventBtn" style="display:none"><button class="btn btn-primary btn-sm" onclick="Modal.open('eventModal')">+ Create Event</button></div>
+    </header>
+    <div class="content-area">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="loadEvents('upcoming')">Upcoming</button>
+        <button class="tab-btn" onclick="loadEvents('past')">Past Events</button>
+        <button class="tab-btn" onclick="loadEvents('myRSVP')">My RSVP</button>
+      </div>
+      <div id="eventsContainer"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+<!-- EVENT MODAL -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal" style="max-width:550px">
+    <div class="modal-header"><div class="modal-title">📅 Create Event</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Event Title *</label><input class="form-control" id="evTitle" placeholder="Event name"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="evDesc" rows="3" placeholder="Describe the event..."></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Date & Time *</label><input type="datetime-local" class="form-control" id="evDate"></div>
+      <div class="form-group"><label class="form-label">Type</label><select class="form-control" id="evType"><option value="prayer_meeting">Prayer Meeting</option><option value="bible_study">Bible Study</option><option value="vigil">Vigil</option><option value="conference">Conference</option><option value="fellowship">Fellowship</option><option value="outreach">Outreach</option><option value="other">Other</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Location</label><input class="form-control" id="evLocation" placeholder="Physical address or 'Online'"></div>
+    <div class="form-group"><label class="form-label">Virtual Link (if online)</label><input type="url" class="form-control" id="evLink" placeholder="https://zoom.us/j/..."></div>
+    <div class="form-group"><label class="form-label">Event Flyer</label><input type="file" class="form-control" id="evFlyer" accept="image/*"></div>
+    <button class="btn btn-primary btn-block" onclick="createEvent()">Create Event 📅</button>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  if (['worker','admin'].includes(currentUser.role)) document.getElementById('createEventBtn').style.display = 'block';
+  loadEvents('upcoming');
+}
+async function loadEvents(type) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event?.target?.classList.add('active');
+  const container = document.getElementById('eventsContainer');
+  container.innerHTML = '<div class="flex-center" style="padding:60px"><div class="spinner"></div></div>';
+  try {
+    let res;
+    if (type === 'upcoming') res = await API.getUpcomingEvents();
+    else if (type === 'past') res = await API.get('/events/past');
+    else res = await API.get('/events/my-rsvp');
+    const events = res?.events || [];
+    if (!events.length) { container.innerHTML = '<div class="empty-state"><div class="icon">📅</div><h3>No events found</h3><p>Check back for upcoming programs and meetings</p></div>'; return; }
+    container.innerHTML = events.map(ev => {
+      const d = new Date(ev.event_date);
+      return `<div class="event-card">
+        <div class="event-date-col"><div class="event-month">${d.toLocaleDateString('en',{month:'short'})}</div><div class="event-day">${d.getDate()}</div></div>
+        <div class="event-body">
+          <div class="event-title">${ev.title}</div>
+          <div class="event-detail">⏰ ${d.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}</div>
+          ${ev.location ? `<div class="event-detail">📍 ${ev.location}</div>` : ''}
+          ${ev.virtual_link ? `<div class="event-detail">🔗 <a href="${ev.virtual_link}" target="_blank" style="color:var(--primary)">Join Online</a></div>` : ''}
+          ${ev.description ? `<div style="font-size:13px;color:var(--gray-700);margin-top:8px;line-height:1.5">${ev.description.slice(0,120)}...</div>` : ''}
+        </div>
+        <div class="event-actions" style="flex-direction:column;align-items:flex-end;padding:12px;gap:6px">
+          <span class="badge badge-primary">${ev.type?.replace('_',' ')}</span>
+          <span style="font-size:12px;color:var(--gray-500)">${ev.rsvp_count || 0} attending</span>
+          <button class="btn btn-primary btn-sm" onclick="rsvp('${ev.id}','attending',this)">✅ Attend</button>
+          <button class="btn btn-outline btn-sm" onclick="rsvp('${ev.id}','not_attending',this)">❌ Can't attend</button>
+        </div>
+      </div>`;}).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Could not load events</h3></div>'; }
+}
+async function rsvp(id, status, btn) {
+  const res = await API.rsvpEvent(id, status);
+  if (res?.success) { Toast.success(status === 'attending' ? 'RSVP confirmed! See you there! 🙌' : 'RSVP updated'); btn.style.background = status === 'attending' ? 'var(--success)' : 'var(--gray-300)'; }
+  else Toast.error(res?.message || 'Error');
+}
+async function createEvent() {
+  const fd = new FormData();
+  fd.append('title', document.getElementById('evTitle').value);
+  fd.append('description', document.getElementById('evDesc').value);
+  fd.append('event_date', document.getElementById('evDate').value);
+  fd.append('event_type', document.getElementById('evType').value);
+  fd.append('location', document.getElementById('evLocation').value);
+  fd.append('virtual_link', document.getElementById('evLink').value);
+  const flyer = document.getElementById('evFlyer').files[0];
+  if (flyer) fd.append('flyer', flyer);
+  const res = await API.createEvent(fd);
+  if (res?.success) { Toast.success('Event created!'); Modal.close('eventModal'); loadEvents('upcoming'); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

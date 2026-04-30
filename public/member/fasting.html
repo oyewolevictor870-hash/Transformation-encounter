@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fasting | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/fasting.html" class="sidebar-link active"><span class="icon">⚡</span> Fasting</a>
+      <a href="/member/prayer-requests.html" class="sidebar-link"><span class="icon">🙏</span> Prayer Requests</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">⚡ Fasting & Prayer</div></div>
+      <div id="declareBtn" style="display:none"><button class="btn btn-primary btn-sm" onclick="Modal.open('fastModal')">+ Declare Fast</button></div>
+    </header>
+    <div class="content-area">
+      <div id="fastingList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DECLARE FAST MODAL -->
+<div class="modal-overlay" id="fastModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">⚡ Declare Fasting Period</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Title *</label><input class="form-control" id="fTitle" placeholder="e.g. 7-Day Daniel Fast"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="fDesc" rows="3" placeholder="What is this fast about?"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Start Date *</label><input type="date" class="form-control" id="fStart"></div>
+      <div class="form-group"><label class="form-label">End Date *</label><input type="date" class="form-control" id="fEnd"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Instructions</label><textarea class="form-control" id="fInstructions" rows="4" placeholder="e.g. No food from 6am-6pm. Drink only water. Pray at 6am and 6pm..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="declareFast()">Declare Fast ⚡</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  if (['worker','admin'].includes(currentUser.role)) document.getElementById('declareBtn').style.display = 'block';
+  loadFasting();
+}
+async function loadFasting() {
+  const container = document.getElementById('fastingList');
+  try {
+    const res = await API.getFasting();
+    if (!res?.fasts?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><h3>No active fasts</h3><p>When a fasting period is declared, it will appear here.</p></div>'; return; }
+    container.innerHTML = res.fasts.map(f => {
+      const start = new Date(f.start_date);
+      const end = new Date(f.end_date);
+      const today = new Date();
+      const isActive = today >= start && today <= end;
+      const progress = isActive ? Math.round((today - start) / (end - start) * 100) : (today > end ? 100 : 0);
+      return `<div class="card" style="margin-bottom:20px;border-left:4px solid var(--primary)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+          <div>
+            <div style="font-weight:800;font-size:20px;color:var(--primary)">⚡ ${f.title}</div>
+            <div style="font-size:13px;color:var(--gray-500);margin-top:4px">📅 ${Utils.formatDate(f.start_date)} → ${Utils.formatDate(f.end_date)} (${f.duration_days} days)</div>
+          </div>
+          <span class="badge badge-${isActive?'success':'primary'}">${isActive ? '🔴 ACTIVE' : (today > end ? '✅ Completed' : '⏳ Upcoming')}</span>
+        </div>
+        ${f.description ? `<div style="font-size:14px;color:var(--gray-700);line-height:1.6;margin-bottom:12px">${f.description}</div>` : ''}
+        ${isActive ? `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Progress</span><span>${progress}% — Day ${Math.ceil((today-start)/(1000*60*60*24))} of ${f.duration_days}</span></div><div style="height:10px;background:var(--gray-200);border-radius:5px;overflow:hidden"><div style="height:100%;background:linear-gradient(to right,var(--primary),var(--gold));border-radius:5px;width:${progress}%"></div></div></div>` : ''}
+        ${f.instructions ? `<div style="background:rgba(45,27,105,0.05);border-radius:8px;padding:14px;margin-bottom:12px"><div style="font-weight:700;color:var(--primary);margin-bottom:8px;font-size:13px">📋 Instructions</div><div style="font-size:13px;color:var(--gray-700);line-height:1.7;white-space:pre-line">${f.instructions}</div></div>` : ''}
+        <div style="display:flex;gap:12px;align-items:center">
+          <span style="font-size:13px;color:var(--gray-500)">👥 ${f.participant_count || 0} participants</span>
+          ${isActive || new Date() < start ? `<button class="btn btn-primary btn-sm" onclick="joinFast('${f.id}',this)">⚡ Join This Fast</button>` : ''}
+        </div>
+      </div>`;}).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading</h3></div>'; }
+}
+async function joinFast(id, btn) {
+  const res = await API.joinFast(id);
+  if (res?.success) { Toast.success('You have joined the fast! God strengthen you. ⚡'); btn.textContent = '✅ Joined'; btn.disabled = true; }
+  else Toast.error(res?.message || 'Error joining fast');
+}
+async function declareFast() {
+  const data = { title: document.getElementById('fTitle').value, description: document.getElementById('fDesc').value, start_date: document.getElementById('fStart').value, end_date: document.getElementById('fEnd').value, instructions: document.getElementById('fInstructions').value };
+  if (!data.title || !data.start_date || !data.end_date) return Toast.error('Please fill in required fields');
+  const res = await API.post('/misc/fasting', data);
+  if (res?.success) { Toast.success('Fasting period declared! ⚡'); Modal.close('fastModal'); loadFasting(); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,866 @@
+/* ============================
+   ADMIN PANEL CSS
+   ============================ */
+
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: 250px;
+    background: #0F0A1E;
+    min-height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s;
+}
+
+.admin-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-sidebar-title {
+    color: var(--gold);
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.admin-sidebar-subtitle {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+}
+
+.admin-nav {
+    flex: 1;
+    padding: 12px 0;
+    overflow-y: auto;
+}
+
+.admin-nav-group {
+    margin-bottom: 8px;
+}
+
+.admin-nav-label {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 10px 20px 4px;
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.admin-nav-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--white);
+}
+
+.admin-nav-link.active {
+    background: rgba(245, 166, 35, 0.12);
+    color: var(--gold);
+    border-right: 3px solid var(--gold);
+}
+
+.admin-nav-link .nav-icon {
+    font-size: 15px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.admin-main {
+    margin-left: 250px;
+    flex: 1;
+    background: #F5F4FA;
+    min-width: 0;
+}
+
+.admin-topbar {
+    background: var(--white);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    gap: 12px;
+}
+
+.admin-page-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0F0A1E;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-content {
+    padding: 24px;
+}
+
+/* Admin mobile toggle */
+.admin-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--gray-700);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Admin sidebar overlay */
+.admin-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 49;
+}
+
+.admin-sidebar-overlay.active {
+    display: block;
+}
+
+/* ADMIN STAT CARDS */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.admin-stat {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+    border-top: 3px solid;
+}
+
+.admin-stat:nth-child(1) {
+    border-top-color: var(--primary);
+}
+
+.admin-stat:nth-child(2) {
+    border-top-color: var(--gold);
+}
+
+.admin-stat:nth-child(3) {
+    border-top-color: var(--success);
+}
+
+.admin-stat:nth-child(4) {
+    border-top-color: var(--danger);
+}
+
+.admin-stat:nth-child(5) {
+    border-top-color: var(--info);
+}
+
+.admin-stat-value {
+    font-size: 30px;
+    font-weight: 900;
+    color: var(--primary);
+}
+
+.admin-stat-label {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.admin-stat-change {
+    font-size: 11px;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.admin-stat-change.up {
+    color: var(--success);
+}
+
+.admin-stat-change.down {
+    color: var(--danger);
+}
+
+/* ADMIN TABLE */
+.admin-table-wrapper {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.admin-table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.admin-table-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.admin-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 600px;
+}
+
+.admin-table th {
+    background: var(--gray-100);
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray-500);
+    border-bottom: 1px solid var(--gray-200);
+    white-space: nowrap;
+}
+
+.admin-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-100);
+    color: var(--gray-700);
+    vertical-align: middle;
+}
+
+.admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-table tr:hover td {
+    background: var(--gray-100);
+}
+
+.admin-table .member-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-table .member-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.admin-table .member-name {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.admin-table .member-email {
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+.role-badge {
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.role-badge.admin {
+    background: rgba(45, 27, 105, 0.12);
+    color: var(--primary);
+}
+
+.role-badge.worker {
+    background: rgba(245, 166, 35, 0.15);
+    color: var(--gold-dark);
+}
+
+.role-badge.member {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.role-badge.pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.active {
+    background: var(--success);
+}
+
+.status-dot.pending {
+    background: var(--warning);
+}
+
+.status-dot.suspended {
+    background: var(--danger);
+}
+
+/* FINANCIAL */
+.financial-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.financial-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.financial-card .amount {
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--primary);
+    word-break: break-all;
+}
+
+.financial-card .label {
+    font-size: 13px;
+    color: var(--gray-500);
+    margin-top: 4px;
+}
+
+.financial-card.collected {
+    border-left: 4px solid var(--success);
+}
+
+.financial-card.pending {
+    border-left: 4px solid var(--warning);
+}
+
+.financial-card.members {
+    border-left: 4px solid var(--primary);
+}
+
+/* ANALYTICS */
+.chart-container {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    overflow-x: auto;
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 20px;
+}
+
+.simple-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 120px;
+    min-width: 300px;
+}
+
+.bar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.bar-fill {
+    width: 100%;
+    background: linear-gradient(to top, var(--primary), var(--primary-light));
+    border-radius: 4px 4px 0 0;
+    min-height: 4px;
+    transition: var(--transition);
+}
+
+.bar-label {
+    font-size: 10px;
+    color: var(--gray-500);
+}
+
+.bar-value {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* CONTENT MODERATION */
+.approval-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.approval-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.approval-title {
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 6px;
+}
+
+.approval-excerpt {
+    font-size: 13px;
+    color: var(--gray-700);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.approval-submitter {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.approval-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-self: flex-start;
+}
+
+/* ACTION LOG */
+.log-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-100);
+    align-items: flex-start;
+}
+
+.log-item:last-child {
+    border-bottom: none;
+}
+
+.log-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.log-action {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.log-detail {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.log-time {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* VOICE ROOM ADMIN */
+.room-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.room-status {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.room-status.live {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+.room-status.offline {
+    background: var(--gray-300);
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.room-info h3 {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.room-info p {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.room-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Large tablet */
+@media (max-width: 1100px) {
+    .admin-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .admin-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .financial-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        width: 250px;
+        height: 100%;
+        transform: 0.3s;
+        z-index: 1000;
+        transform: translateX(-100%);
+    }
+
+    .admin-sidebar.active{
+        left: 0;
+    }
+
+    .admin-main {
+        margin-left: 0;
+    }
+
+    .admin-menu-toggle {
+        display: flex;
+    }
+
+    .admin-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .financial-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-content {
+        padding: 16px;
+    }
+
+    .admin-topbar {
+        padding: 0 16px;
+    }
+
+    .admin-page-title {
+        font-size: 15px;
+    }
+
+    /* Room card wraps nicely */
+    .room-card {
+        padding: 16px;
+    }
+
+    .room-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    /* Approval card */
+    .approval-actions {
+        flex-direction: row;
+    }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-stat-value {
+        font-size: 24px;
+    }
+
+    .admin-content {
+        padding: 12px;
+    }
+
+    /* Financial amounts */
+    .financial-card .amount {
+        font-size: 28px;
+    }
+
+    .financial-card {
+        padding: 16px;
+    }
+
+    /* Approval on small screens */
+    .approval-card {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .approval-actions {
+        flex-direction: row;
+        width: 100%;
+    }
+
+    /* Room card */
+    .room-info h3 {
+        font-size: 14px;
+    }
+
+    /* Log items */
+    .log-time {
+        display: none;
+    }
+}
+
+/* Ultra compact mobile (320px) */
+@media (max-width: 320px) {
+    .admin-sidebar {
+        width: 200px;
+        left: -200px;
+    }
+
+    .admin-sidebar.active {
+        left: 0;
+        width: 200px;
+    }
+
+    .admin-main {
+        margin-left: 0;
+    }
+
+    .admin-topbar {
+        height: 50px;
+        padding: 0 12px;
+    }
+
+    .admin-page-title {
+        font-size: 14px;
+    }
+
+    .admin-content {
+        padding: 8px;
+    }
+
+    .admin-stats {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .admin-stat {
+        padding: 12px;
+    }
+
+    .admin-stat-value {
+        font-size: 20px;
+    }
+
+    .admin-stat-label {
+        font-size: 11px;
+    }
+
+    /* Financial cards */
+    .financial-summary {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .financial-card {
+        padding: 12px;
+    }
+
+    .financial-card h4 {
+        font-size: 12px;
+    }
+
+    .financial-card .amount {
+        font-size: 20px;
+    }
+
+    /* Table responsive */
+    .admin-table {
+        font-size: 12px;
+    }
+
+    .admin-table-header {
+        padding: 8px;
+    }
+
+    .admin-table-row {
+        padding: 8px;
+        flex-direction: column;
+    }
+
+    /* Approval cards */
+    .approval-card {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .approval-actions {
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .approval-actions .btn {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    /* Room cards */
+    .room-card {
+        padding: 12px;
+        flex-direction: column;
+    }
+
+    .room-info h3 {
+        font-size: 13px;
+    }
+
+    .room-info p {
+        font-size: 11px;
+    }
+
+    .room-badge {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+
+    .room-actions {
+        width: 100%;
+        gap: 6px;
+        margin-left: 0;
+    }
+
+    .room-actions .btn {
+        font-size: 11px;
+        padding: 6px 10px;
+        flex: 1;
+    }
+
+    /* Log items */
+    .log-item {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .log-time {
+        display: none;
+    }
+
+    /* Form controls */
+    .form-control {
+        font-size: 13px;
+        padding: 6px 8px;
+    }
+
+    .form-label {
+        font-size: 11px;
+    }
+
+    /* Buttons */
+    .btn {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .btn-lg {
+        font-size: 12px;
+        padding: 10px 16px;
+    }
+}

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prayer Room | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/prayer-room.html" class="sidebar-link active"><span class="icon">📻</span> Prayer Room</a>
+      <a href="/member/chat.html" class="sidebar-link"><span class="icon">💬</span> Group Chat</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">📻 Prayer Room</div></div>
+    </header>
+    <div class="content-area">
+      <!-- ROOM STATUS BANNER -->
+      <div id="roomOffline" class="card" style="text-align:center;padding:60px;margin-bottom:24px">
+        <div style="font-size:64px;margin-bottom:16px">🔇</div>
+        <h2 style="color:var(--primary);margin-bottom:8px">No Active Prayer Room</h2>
+        <p style="color:var(--gray-500)">The prayer room is currently offline. An admin will open it when it's time to pray. You'll receive a notification.</p>
+      </div>
+
+      <!-- VOICE ROOM UI (shown when room is active) -->
+      <div id="voiceRoomContainer" style="display:none">
+        <div class="voice-room-container">
+          <div class="voice-room-title" id="roomTitle">General Prayer Room</div>
+          <div class="voice-room-status" id="roomStatus">Connecting...</div>
+
+          <!-- PARTICIPANTS -->
+          <div class="participants-grid" id="participants"></div>
+
+          <!-- CONTROLS -->
+          <div class="voice-controls">
+            <button class="voice-btn mic" id="micBtn" onclick="toggleMic()" title="Toggle Microphone">🎙️</button>
+            <button class="voice-btn leave" onclick="leaveRoom()" title="Leave Room">📴</button>
+          </div>
+          <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:16px">This is a WebRTC voice room — your browser may request microphone permission.</div>
+        </div>
+
+        <!-- PRAYER CHAT ALONGSIDE ROOM -->
+        <div class="card" style="margin-top:24px">
+          <div style="font-weight:700;color:var(--primary);margin-bottom:12px">💬 Prayer Chat</div>
+          <div id="roomChat" style="height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="form-control" id="roomChatInput" placeholder="Type a prayer or encouragement..." onkeydown="if(event.key==='Enter')sendRoomChat()">
+            <button class="btn btn-primary btn-sm" onclick="sendRoomChat()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let currentUser = null;
+let socket = null;
+let localStream = null;
+let peers = {};
+let micMuted = false;
+let currentRoom = null;
+
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+
+  socket = io();
+  socket.emit('user:join', currentUser.id);
+
+  socket.on('voice:user-joined', async ({ userId, socketId }) => {
+    addParticipant(userId, socketId);
+    const pc = createPeerConnection(socketId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('voice:offer', { to: socketId, offer });
+  });
+
+  socket.on('voice:offer', async ({ offer, from }) => {
+    const pc = createPeerConnection(from);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('voice:answer', { to: from, answer });
+  });
+
+  socket.on('voice:answer', async ({ answer, from }) => {
+    const pc = peers[from];
+    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  });
+
+  socket.on('voice:ice-candidate', ({ candidate, from }) => {
+    const pc = peers[from];
+    if (pc) pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+  });
+
+  socket.on('voice:user-left', ({ userId }) => {
+    removeParticipant(userId);
+  });
+
+  socket.on('chat:message', (msg) => {
+    if (msg.room === `voice:${currentRoom}`) appendRoomChat(msg);
+  });
+
+  checkRoomStatus();
+}
+
+async function checkRoomStatus() {
+  try {
+    const res = await API.getVoiceRooms();
+    const general = res?.rooms?.find(r => r.type === 'general_prayer' && r.is_active);
+    if (general) {
+      currentRoom = 'general_prayer';
+      document.getElementById('roomOffline').style.display = 'none';
+      document.getElementById('voiceRoomContainer').style.display = 'block';
+      document.getElementById('roomTitle').textContent = 'General Prayer Room 🔥';
+      document.getElementById('roomStatus').textContent = 'Tap Join to enter the prayer room';
+      joinRoom('general_prayer');
+    }
+  } catch(e) {}
+}
+
+async function joinRoom(roomId) {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    document.getElementById('roomStatus').textContent = '🔴 LIVE — You are in the prayer room';
+    addMyTile();
+    socket.emit('voice:join', { room: roomId, userId: currentUser.id });
+    socket.emit('chat:join', `voice:${roomId}`);
+    Toast.success('Joined prayer room! 🙏');
+  } catch(e) {
+    document.getElementById('roomStatus').textContent = '❌ Microphone access denied. You can still listen.';
+    Toast.error('Microphone access required to speak. You are in listen-only mode.');
+  }
+}
+
+function createPeerConnection(socketId) {
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+  peers[socketId] = pc;
+  if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  pc.onicecandidate = (e) => { if (e.candidate) socket.emit('voice:ice-candidate', { to: socketId, candidate: e.candidate }); };
+  pc.ontrack = (e) => {
+    const audio = document.createElement('audio');
+    audio.srcObject = e.streams[0];
+    audio.autoplay = true;
+    document.body.appendChild(audio);
+    pc._audio = audio;
+  };
+  return pc;
+}
+
+function addMyTile() {
+  const grid = document.getElementById('participants');
+  grid.innerHTML = `<div class="participant-tile" id="tile-me">
+    <div class="participant-avatar speaking">${Utils.initials(currentUser.full_name)}</div>
+    <div class="participant-name">${currentUser.full_name} (You)</div>
+  </div>`;
+}
+
+function addParticipant(userId, socketId) {
+  const grid = document.getElementById('participants');
+  const tile = document.createElement('div');
+  tile.className = 'participant-tile';
+  tile.id = `tile-${socketId}`;
+  tile.innerHTML = `<div class="participant-avatar">${userId.toString().slice(0,2)}</div><div class="participant-name">Member</div>`;
+  grid.appendChild(tile);
+}
+
+function removeParticipant(userId) {
+  document.querySelectorAll('.participant-tile').forEach(t => { if (t.id.includes(userId)) t.remove(); });
+}
+
+function toggleMic() {
+  micMuted = !micMuted;
+  if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = !micMuted; });
+  const btn = document.getElementById('micBtn');
+  btn.textContent = micMuted ? '🔇' : '🎙️';
+  btn.classList.toggle('muted', micMuted);
+}
+
+function leaveRoom() {
+  if (socket && currentRoom) socket.emit('voice:leave', { room: currentRoom, userId: currentUser.id });
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  Object.values(peers).forEach(pc => { if (pc._audio) pc._audio.remove(); pc.close(); });
+  peers = {};
+  document.getElementById('voiceRoomContainer').style.display = 'none';
+  document.getElementById('roomOffline').style.display = 'block';
+  Toast.info('You left the prayer room.');
+}
+
+function sendRoomChat() {
+  const input = document.getElementById('roomChatInput');
+  const content = input.value.trim();
+  if (!content || !socket) return;
+  socket.emit('chat:message', { userId: currentUser.id, content, room: `voice:${currentRoom}` });
+  input.value = '';
+}
+
+function appendRoomChat(msg) {
+  const container = document.getElementById('roomChat');
+  const div = document.createElement('div');
+  div.style.cssText = 'font-size:13px;padding:6px 0;border-bottom:1px solid var(--gray-100)';
+  div.innerHTML = `<strong style="color:var(--primary)">${msg.full_name || 'Member'}:</strong> ${msg.content}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

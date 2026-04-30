@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resources & Gallery | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/resources.html" class="sidebar-link active"><span class="icon">📚</span> Resources</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">📚 Resources & Gallery</div></div>
+      <div id="uploadBtn" style="display:none"><button class="btn btn-primary btn-sm" onclick="Modal.open('uploadModal')">+ Upload</button></div>
+    </header>
+    <div class="content-area">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="loadTab('resources',this)">📄 Documents</button>
+        <button class="tab-btn" onclick="loadTab('flyers',this)">🖼️ Flyers</button>
+        <button class="tab-btn" onclick="loadTab('gallery',this)">📷 Gallery</button>
+        <button class="tab-btn" onclick="loadTab('lyrics',this)">🎵 Worship Lyrics</button>
+      </div>
+      <div id="tabContent"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">⬆️ Upload Resource</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Type</label><select class="form-control" id="uploadType"><option value="resource">📄 Document/PDF</option><option value="flyer">🖼️ Flyer</option><option value="gallery">📷 Gallery Photo</option></select></div>
+    <div class="form-group"><label class="form-label">Title *</label><input class="form-control" id="uTitle" placeholder="Resource title"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="uDesc" rows="2"></textarea></div>
+    <div class="form-group"><label class="form-label">File *</label><input type="file" class="form-control" id="uFile"></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" id="uPublic" checked> Make publicly available (visible on landing page)</label></div>
+    <button class="btn btn-primary btn-block" onclick="uploadResource()">Upload ⬆️</button>
+  </div>
+</div>
+
+<!-- LYRICS MODAL -->
+<div class="modal-overlay" id="lyricsModal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header"><div class="modal-title" id="lyricsTitle">Worship Song</div><button class="modal-close">✕</button></div>
+    <div style="font-size:13px;color:var(--gold-dark);margin-bottom:12px" id="lyricsArtist"></div>
+    <div id="lyricsContent" style="white-space:pre-line;font-size:14px;line-height:1.9;color:var(--gray-700)"></div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  if (['worker','admin'].includes(currentUser.role)) document.getElementById('uploadBtn').style.display = 'block';
+  loadTab('resources', document.querySelector('.tab-btn'));
+}
+async function loadTab(type, btn) {
+  if (btn) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  const container = document.getElementById('tabContent');
+  container.innerHTML = '<div class="flex-center" style="padding:60px"><div class="spinner"></div></div>';
+  try {
+    let res, html = '';
+    if (type === 'resources') {
+      res = await API.getResources();
+      if (!res?.resources?.length) { html = '<div class="empty-state"><div class="icon">📄</div><h3>No documents yet</h3></div>'; }
+      else html = res.resources.map(r => `<div class="card" style="display:flex;gap:16px;align-items:center;margin-bottom:12px">
+        <div style="font-size:36px">${{pdf:'📕',doc:'📘',docx:'📘',mp3:'🎵',mp4:'🎬'}[r.file_type]||'📄'}</div>
+        <div style="flex:1"><div style="font-weight:700;color:var(--primary)">${r.title}</div>${r.description?`<div style="font-size:13px;color:var(--gray-500)">${r.description}</div>`:''}<div style="font-size:11px;color:var(--gray-500)">${r.file_type?.toUpperCase()} • ${r.download_count||0} downloads</div></div>
+        <a href="${r.file_url}" download onclick="API.put('/resources/${r.id}/download')" class="btn btn-primary btn-sm">⬇️ Download</a>
+      </div>`).join('');
+    } else if (type === 'flyers') {
+      res = await API.getFlyers();
+      if (!res?.flyers?.length) { html = '<div class="empty-state"><div class="icon">🖼️</div><h3>No flyers yet</h3></div>'; }
+      else html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">${res.flyers.map(f => `<div class="card" style="padding:0;overflow:hidden"><img src="${f.image_url}" alt="${f.title}" style="width:100%;height:200px;object-fit:cover"><div style="padding:12px"><div style="font-weight:700;color:var(--primary);font-size:13px">${f.title}</div><a href="${f.image_url}" download class="btn btn-outline btn-sm" style="margin-top:8px;width:100%">⬇️ Download Flyer</a></div></div>`).join('')}</div>`;
+    } else if (type === 'gallery') {
+      res = await API.getGallery();
+      if (!res?.gallery?.length) { html = '<div class="empty-state"><div class="icon">📷</div><h3>No photos yet</h3></div>'; }
+      else html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">${res.gallery.map(g => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer" onclick="window.open('${g.image_url}','_blank')"><img src="${g.image_url}" alt="${g.title}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}</div>`;
+    } else if (type === 'lyrics') {
+      res = await API.getLyrics();
+      if (!res?.lyrics?.length) { html = '<div class="empty-state"><div class="icon">🎵</div><h3>No lyrics yet</h3></div>'; }
+      else html = res.lyrics.map(l => `<div class="card" style="display:flex;gap:16px;align-items:center;margin-bottom:12px;cursor:pointer" onclick="showLyrics('${encodeURIComponent(l.song_title)}','${encodeURIComponent(l.artist||'')}','${encodeURIComponent(l.lyrics)}')">
+        <div style="font-size:36px">🎵</div>
+        <div style="flex:1"><div style="font-weight:700;color:var(--primary)">${l.song_title}</div>${l.artist?`<div style="font-size:13px;color:var(--gray-500)">${l.artist}</div>`:''}</div>
+        <div class="btn btn-outline btn-sm">View Lyrics →</div>
+      </div>`).join('');
+    }
+    container.innerHTML = html;
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading</h3></div>'; }
+}
+function showLyrics(title, artist, lyrics) {
+  document.getElementById('lyricsTitle').textContent = decodeURIComponent(title);
+  document.getElementById('lyricsArtist').textContent = decodeURIComponent(artist) || '';
+  document.getElementById('lyricsContent').textContent = decodeURIComponent(lyrics);
+  Modal.open('lyricsModal');
+}
+async function uploadResource() {
+  const type = document.getElementById('uploadType').value;
+  const fd = new FormData();
+  fd.append('title', document.getElementById('uTitle').value);
+  fd.append('description', document.getElementById('uDesc').value);
+  fd.append('is_public', document.getElementById('uPublic').checked);
+  const file = document.getElementById('uFile').files[0];
+  if (!file) return Toast.error('Please select a file');
+  let endpoint;
+  if (type === 'resource') { fd.append('file', file); fd.append('category', 'general'); endpoint = '/resources'; }
+  else if (type === 'flyer') { fd.append('image', file); endpoint = '/resources/flyers'; }
+  else { fd.append('image', file); endpoint = '/resources/gallery'; }
+  const res = await API.post(endpoint, fd, true);
+  if (res?.success) { Toast.success('Uploaded successfully! ✅'); Modal.close('uploadModal'); }
+  else Toast.error(res?.message || 'Upload error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

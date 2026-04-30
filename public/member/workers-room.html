@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workers Room | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div><div class="sidebar-role-badge">Workers</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/post-content.html" class="sidebar-link"><span class="icon">✏️</span> Post Content</a>
+      <a href="/member/workers-room.html" class="sidebar-link active"><span class="icon">🔒</span> Workers Room</a>
+      <a href="/member/approve-testimonies.html" class="sidebar-link"><span class="icon">✅</span> Approve Testimonies</a>
+      <a href="/member/manage-prayers.html" class="sidebar-link"><span class="icon">⚙️</span> Manage Prayers</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">🔒 Workers' Room</div></div>
+    </header>
+    <div class="content-area">
+      <div class="alert alert-warning">🔒 This area is for approved workers and leaders only. Content here is private and not visible to regular members.</div>
+      <div class="grid-2" style="gap:24px;margin-bottom:24px">
+        <!-- TASKS -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:16px">📋 Ministry Tasks</div>
+          <button class="btn btn-primary btn-sm btn-block" style="margin-bottom:12px" onclick="Modal.open('taskModal')">+ Add Task</button>
+          <div id="taskList"><div class="flex-center" style="padding:20px"><div class="spinner"></div></div></div>
+        </div>
+        <!-- DISCUSSIONS -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:16px">💬 Workers' Chat</div>
+          <div id="workersChat" style="height:250px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px"></div>
+          <div style="display:flex;gap:8px">
+            <input class="form-control" id="workersMsgInput" placeholder="Message workers only..." onkeydown="if(event.key==='Enter')sendWorkersMsg()">
+            <button class="btn btn-primary btn-sm" onclick="sendWorkersMsg()">Send</button>
+          </div>
+        </div>
+      </div>
+      <!-- ANNOUNCEMENTS FOR WORKERS -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div class="card-title">📣 Workers Announcements</div><button class="btn btn-outline btn-sm" onclick="Modal.open('announcementModal')">+ Post</button></div>
+        <div id="workerAnnouncements"><div class="flex-center" style="padding:20px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📋 Add Ministry Task</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Task Title *</label><input class="form-control" id="tTitle" placeholder="e.g. Prepare Sunday bulletin"></div>
+    <div class="form-group"><label class="form-label">Assigned To</label><input class="form-control" id="tAssignee" placeholder="Worker name or department"></div>
+    <div class="form-group"><label class="form-label">Due Date</label><input type="date" class="form-control" id="tDue"></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="tNotes" rows="3"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addTask()">Add Task 📋</button>
+  </div>
+</div>
+
+<!-- ANNOUNCEMENT MODAL -->
+<div class="modal-overlay" id="announcementModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📣 Workers Announcement</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Title</label><input class="form-control" id="aTitle" placeholder="Announcement title"></div>
+    <div class="form-group"><label class="form-label">Message *</label><textarea class="form-control" id="aMsg" rows="4"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="postAnnouncement()">Post Announcement 📣</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let currentUser = null; let socket = null;
+async function init() {
+  currentUser = Utils.requireRole(['worker','admin']);
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  loadTasks(); loadAnnouncements(); loadWorkersChat();
+  socket = io();
+  socket.emit('user:join', currentUser.id);
+  socket.emit('chat:join', 'workers');
+  socket.on('chat:message', msg => { if (msg.room === 'workers') appendWorkerMsg(msg); });
+}
+async function loadTasks() {
+  const res = await API.get('/misc/tasks');
+  const container = document.getElementById('taskList');
+  if (!res?.tasks?.length) { container.innerHTML = '<div style="text-align:center;color:var(--gray-500);font-size:13px">No tasks yet</div>'; return; }
+  container.innerHTML = res.tasks.map(t => `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--gray-100)">
+    <input type="checkbox" ${t.is_done?'checked':''} style="margin-top:3px" onchange="toggleTask('${t.id}',this)">
+    <div style="flex:1;${t.is_done?'text-decoration:line-through;opacity:0.5':''}">
+      <div style="font-size:13px;font-weight:600;color:var(--primary)">${t.title}</div>
+      ${t.assignee ? `<div style="font-size:11px;color:var(--gray-500)">👤 ${t.assignee}</div>` : ''}
+      ${t.due_date ? `<div style="font-size:11px;color:var(--warning)">📅 Due: ${Utils.formatDate(t.due_date)}</div>` : ''}
+    </div>
+  </div>`).join('');
+}
+async function addTask() {
+  const res = await API.post('/misc/tasks', { title: document.getElementById('tTitle').value, assignee: document.getElementById('tAssignee').value, due_date: document.getElementById('tDue').value, notes: document.getElementById('tNotes').value });
+  if (res?.success) { Toast.success('Task added!'); Modal.close('taskModal'); loadTasks(); }
+  else Toast.error(res?.message || 'Error');
+}
+async function toggleTask(id, chk) {
+  await API.put(`/misc/tasks/${id}`, { is_done: chk.checked });
+}
+async function loadAnnouncements() {
+  const res = await API.get('/misc/workers-announcements');
+  const container = document.getElementById('workerAnnouncements');
+  if (!res?.announcements?.length) { container.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px;font-size:13px">No announcements yet</div>'; return; }
+  container.innerHTML = res.announcements.map(a => `<div style="padding:12px;border-bottom:1px solid var(--gray-100)"><div style="font-weight:700;color:var(--primary)">${a.title}</div><div style="font-size:13px;color:var(--gray-700);line-height:1.6;margin-top:4px">${a.message}</div><div style="font-size:11px;color:var(--gray-500);margin-top:6px">By ${a.full_name} • ${Utils.timeAgo(a.created_at)}</div></div>`).join('');
+}
+async function postAnnouncement() {
+  const res = await API.post('/misc/workers-announcements', { title: document.getElementById('aTitle').value, message: document.getElementById('aMsg').value });
+  if (res?.success) { Toast.success('Announcement posted!'); Modal.close('announcementModal'); loadAnnouncements(); }
+  else Toast.error(res?.message || 'Error');
+}
+async function loadWorkersChat() {
+  const res = await API.get('/feed/chat/workers?limit=30');
+  const msgs = res?.messages || [];
+  msgs.forEach(m => appendWorkerMsg(m));
+}
+function appendWorkerMsg(msg) {
+  const c = document.getElementById('workersChat');
+  const div = document.createElement('div');
+  div.style.cssText = 'font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-100)';
+  div.innerHTML = `<strong style="color:var(--primary)">${msg.full_name || 'Worker'}:</strong> ${msg.content}`;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+}
+function sendWorkersMsg() {
+  const input = document.getElementById('workersMsgInput');
+  const content = input.value.trim();
+  if (!content || !socket) return;
+  socket.emit('chat:message', { userId: currentUser.id, content, room: 'workers' });
+  input.value = '';
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

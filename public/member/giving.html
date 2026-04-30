@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giving & Dues | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/giving.html" class="sidebar-link active"><span class="icon">💰</span> Giving & Dues</a>
+      <a href="/member/events.html" class="sidebar-link"><span class="icon">📅</span> Events</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+      <a href="/member/chat.html" class="sidebar-link"><span class="icon">💬</span> Group Chat</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">💰 Giving & Dues</div></div>
+    </header>
+    <div class="content-area">
+      <div class="alert alert-info">💡 Payments are processed securely via Paystack. All transactions are private and only visible to admins.</div>
+
+      <!-- MONTHLY DUES -->
+      <div class="card" style="margin-bottom:24px;border-top:4px solid var(--primary)">
+        <div class="card-header"><div class="card-title">📋 Monthly Dues</div><span id="duesStatus" class="badge"></span></div>
+        <div style="font-size:32px;font-weight:900;color:var(--primary)" id="duesAmount">Loading...</div>
+        <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px" id="duesMonth"></div>
+        <button class="btn btn-primary btn-lg" onclick="payDues()">Pay Monthly Dues</button>
+      </div>
+
+      <!-- GIVING PROJECTS -->
+      <div style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:16px">🎯 Special Projects & Offering</div>
+        <div id="projectsList"><div class="flex-center" style="padding:40px"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- CUSTOM GIVING -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title" style="margin-bottom:16px">💝 Give an Offering</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="form-group"><label class="form-label">Amount (₦)</label><input type="number" class="form-control" id="giveAmount" placeholder="500" min="100"></div>
+          <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="giveCategory"><option value="offering">Offering</option><option value="tithe">Tithe</option><option value="special">Special Seed</option><option value="project">Project Support</option></select></div>
+        </div>
+        <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" class="form-control" id="giveNote" placeholder="Purpose of this giving..."></div>
+        <button class="btn btn-gold btn-block btn-lg" onclick="giveOffering()">💳 Proceed to Payment</button>
+      </div>
+
+      <!-- PAYMENT HISTORY -->
+      <div class="admin-table-wrapper">
+        <div class="admin-table-header"><div style="font-weight:700;color:var(--primary)">💳 Payment History</div></div>
+        <div id="paymentHistory"><div class="flex-center" style="padding:40px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  loadDues(); loadProjects(); loadHistory();
+}
+async function loadDues() {
+  try {
+    const res = await API.getCurrentDues();
+    if (res?.dues) {
+      document.getElementById('duesAmount').textContent = Utils.currency(res.dues.amount);
+      document.getElementById('duesMonth').textContent = `For ${res.dues.month_year}`;
+      const status = document.getElementById('duesStatus');
+      if (res.paid) { status.textContent = '✅ PAID'; status.className = 'badge badge-success'; }
+      else { status.textContent = '⏳ PENDING'; status.className = 'badge badge-warning'; }
+    } else { document.getElementById('duesAmount').textContent = 'No dues set this month'; }
+  } catch(e) {}
+}
+async function loadProjects() {
+  try {
+    const res = await API.getProjects();
+    const container = document.getElementById('projectsList');
+    if (!res?.projects?.length) { container.innerHTML = '<p style="color:var(--gray-500);text-align:center">No active projects</p>'; return; }
+    container.innerHTML = res.projects.map(p => `
+      <div class="card" style="margin-bottom:12px">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:4px">${p.title}</div>
+        <div style="font-size:13px;color:var(--gray-700);margin-bottom:12px">${p.description}</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="flex:1;height:8px;background:var(--gray-200);border-radius:4px"><div style="height:100%;background:var(--success);border-radius:4px;width:${Math.min(100,(p.amount_raised/p.goal_amount*100))}%"></div></div>
+          <span style="font-size:12px;color:var(--gray-500)">${Utils.currency(p.amount_raised)} / ${Utils.currency(p.goal_amount)}</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="giveToProject('${p.id}','${p.title}')">💝 Give to This Project</button>
+      </div>`).join('');
+  } catch(e) {}
+}
+async function loadHistory() {
+  try {
+    const res = await API.getPaymentHistory();
+    const container = document.getElementById('paymentHistory');
+    if (!res?.payments?.length) { container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500)">No payment history yet</div>'; return; }
+    container.innerHTML = `<table class="admin-table"><thead><tr><th>Date</th><th>Amount</th><th>Category</th><th>Status</th><th>Reference</th></tr></thead><tbody>${res.payments.map(p => `<tr><td>${Utils.formatDate(p.created_at)}</td><td style="font-weight:700">${Utils.currency(p.amount)}</td><td><span class="badge badge-primary">${p.category}</span></td><td><span class="badge badge-${p.status==='success'?'success':'warning'}">${p.status}</span></td><td style="font-size:11px;color:var(--gray-500)">${p.paystack_reference || p.id}</td></tr>`).join('')}</tbody></table>`;
+  } catch(e) {}
+}
+function initPaystack(amount, category, note, projectId = null) {
+  const key = window.PAYSTACK_PUBLIC_KEY || 'pk_test_YOUR_PAYSTACK_KEY';
+  if (key.includes('YOUR_PAYSTACK_KEY')) {
+    Toast.error('Paystack is not yet configured. Please contact the admin.');
+    return;
+  }
+  const handler = PaystackPop.setup({
+    key, email: currentUser.email, amount: amount * 100, currency: 'NGN',
+    ref: `TE_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    metadata: { name: currentUser.full_name, category, note },
+    callback: async (response) => {
+      const res = await API.verifyPayment(response.reference);
+      if (res?.success) { Toast.success('Payment successful! God bless you! 🙌'); loadHistory(); loadDues(); }
+      else Toast.error('Payment verification failed. Please contact admin.');
+    },
+    onClose: () => Toast.info('Payment window closed'),
+  });
+  handler.openIframe();
+}
+async function payDues() {
+  const res = await API.getCurrentDues();
+  if (!res?.dues) return Toast.error('No dues set this month');
+  initPaystack(res.dues.amount, 'dues', 'Monthly dues');
+}
+function giveOffering() {
+  const amount = parseInt(document.getElementById('giveAmount').value);
+  if (!amount || amount < 100) return Toast.error('Minimum offering is ₦100');
+  initPaystack(amount, document.getElementById('giveCategory').value, document.getElementById('giveNote').value);
+}
+function giveToProject(projectId, title) {
+  const amount = prompt(`Enter amount to give to "${title}" (₦):`);
+  if (!amount || isNaN(amount)) return;
+  initPaystack(parseInt(amount), 'project', title, projectId);
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

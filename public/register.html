@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Us | Transformation Encounter</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1A0F45 0%, #2D1B69 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .step-indicator {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .step {
+      width: 32px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--gray-200);
+      transition: var(--transition);
+    }
+
+    .step.active {
+      background: var(--primary);
+    }
+
+    .step.done {
+      background: var(--success);
+    }
+
+    .grid-2-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div style="font-size:42px">🔥</div>
+        <h1 style="font-size:20px;font-weight:800;color:var(--primary);margin-top:8px">Join Transformation Encounter
+        </h1>
+        <p style="font-size:13px;color:var(--gray-500)">Create your account — awaiting Admin approval</p>
+      </div>
+      <div class="step-indicator">
+        <div class="step active" id="step1-dot"></div>
+        <div class="step" id="step2-dot"></div>
+      </div>
+      <div id="alertBox"></div>
+
+      <!-- STEP 1 -->
+      <div id="step1">
+        <div class="grid-2-form">
+          <div class="form-group"><label class="form-label">First Name *</label><input class="form-control"
+              id="firstName" placeholder="First name" required></div>
+          <div class="form-group"><label class="form-label">Last Name *</label><input class="form-control" id="lastName"
+              placeholder="Last name" required></div>
+        </div>
+        <div class="form-group"><label class="form-label">Email Address *</label><input type="email"
+            class="form-control" id="regEmail" placeholder="your@email.com" required></div>
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input type="password" class="form-control" id="regPassword" placeholder="Minimum 8 characters" required
+            minlength="8">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password *</label>
+          <input type="password" class="form-control" id="regPassword2" placeholder="Repeat your password" required>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="goStep2()">Continue →</button>
+      </div>
+
+      <!-- STEP 2 -->
+      <div id="step2" style="display:none">
+        <div class="form-group"><label class="form-label">Phone Number</label><input type="tel" class="form-control"
+            id="regPhone" placeholder="+234 000 000 0000"></div>
+        <div class="form-group"><label class="form-label">WhatsApp Number</label><input type="tel" class="form-control"
+            id="regWhatsapp" placeholder="Same as phone or different"></div>
+        <div class="form-group"><label class="form-label">Date of Birth</label><input type="date" class="form-control"
+            id="regBirthday"></div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="agreeTerms"> I agree to the <a href="#" style="color:var(--primary)">Terms of
+              Use</a>
+          </label>
+        </div>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" onclick="goStep1()">← Back</button>
+          <button class="btn btn-primary" style="flex:1" onclick="submitRegister()">Create Account 🙏</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--gray-500)">Already have an account? <a
+          href="/login.html" style="color:var(--primary);font-weight:700">Sign in</a></div>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:13px"><a href="/" style="color:rgba(255,255,255,0.7)">← Back
+        to Home</a></div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    function showAlert(msg, type = 'danger') { document.getElementById('alertBox').innerHTML = `<div class="alert alert-${type}">⚠️ ${msg}</div>`; }
+    function clearAlert() { document.getElementById('alertBox').innerHTML = ''; }
+
+    function goStep2() {
+      clearAlert();
+      const first = document.getElementById('firstName').value.trim();
+      const last = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pw = document.getElementById('regPassword').value;
+      const pw2 = document.getElementById('regPassword2').value;
+      if (!first || !last || !email) return showAlert('Please fill in all required fields.');
+      if (pw.length < 8) return showAlert('Password must be at least 8 characters.');
+      if (pw !== pw2) return showAlert('Passwords do not match.');
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').style.display = 'block';
+      document.getElementById('step1-dot').classList.add('done');
+      document.getElementById('step2-dot').classList.add('active');
+    }
+
+    function goStep1() {
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('step1').style.display = 'block';
+      document.getElementById('step2-dot').classList.remove('active');
+      document.getElementById('step1-dot').classList.remove('done');
+      document.getElementById('step1-dot').classList.add('active');
+    }
+
+    async function submitRegister() {
+      clearAlert();
+      if (!document.getElementById('agreeTerms').checked) return showAlert('Please agree to the terms to continue.');
+      const btn = event.target;
+      btn.textContent = 'Creating account...'; btn.disabled = true;
+      const full_name = `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`;
+      const data = {
+        full_name,
+        email: document.getElementById('regEmail').value.trim(),
+        password: document.getElementById('regPassword').value,
+        phone: document.getElementById('regPhone').value,
+        whatsapp_number: document.getElementById('regWhatsapp').value,
+        birthday: document.getElementById('regBirthday').value || null
+      };
+      const res = await API.register(data);
+      if (res?.success) {
+        document.getElementById('step2').innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <div style="font-size:64px;margin-bottom:16px">✅</div>
+        <h2 style="color:var(--primary);margin-bottom:12px">Registration Submitted!</h2>
+        <p style="color:var(--gray-700);line-height:1.6">Your account is pending Admin approval. You will receive a notification once you're approved. Welcome to the family!</p>
+        <a href="/" class="btn btn-primary btn-block" style="margin-top:24px">Back to Home</a>
+      </div>`;
+      } else {
+        showAlert(res?.message || 'Registration failed. Please try again.');
+        btn.textContent = 'Create Account 🙏'; btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+
+</html>

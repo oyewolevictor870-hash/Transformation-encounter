@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financials | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link active"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)"><a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px"><div class="admin-page-title">💰 Financial Dashboard</div></div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <input type="month" class="form-control" id="monthFilter" onchange="loadFinancials()" style="width:160px">
+        <button class="btn btn-primary btn-sm" onclick="Modal.open('duesModal')">⚙️ Set Dues</button>
+      </div>
+    </header>
+    <div class="admin-content">
+      <div class="alert alert-warning">🔒 Financial data is visible to Admins only. Workers cannot access this section.</div>
+
+      <!-- SUMMARY CARDS -->
+      <div class="financial-summary">
+        <div class="financial-card collected"><div class="amount" id="totalCollected">—</div><div class="label">Total Collected This Month</div></div>
+        <div class="financial-card pending"><div class="amount" id="totalPending">—</div><div class="label">Pending Payments</div></div>
+        <div class="financial-card members"><div class="amount" id="uniquePayers">—</div><div class="label">Unique Payers</div></div>
+      </div>
+
+      <!-- DUES STATUS TABLE -->
+      <div class="admin-table-wrapper" style="margin-bottom:24px">
+        <div class="admin-table-header"><div class="admin-table-title">📋 Monthly Dues Status</div><div style="font-size:13px;color:var(--gray-500)">Current dues: <span id="duesAmount" style="font-weight:700;color:var(--primary)">Not set</span></div></div>
+        <div id="duesTable"><div class="flex-center" style="padding:40px"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- TRANSACTIONS TABLE -->
+      <div class="admin-table-wrapper">
+        <div class="admin-table-header"><div class="admin-table-title">💳 All Transactions</div></div>
+        <div id="transactionsTable"><div class="flex-center" style="padding:40px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SET DUES MODAL -->
+<div class="modal-overlay" id="duesModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><div class="modal-title">⚙️ Set Monthly Dues</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Month (YYYY-MM)</label><input type="month" class="form-control" id="duesMonth"></div>
+    <div class="form-group"><label class="form-label">Amount (₦)</label><input type="number" class="form-control" id="duesAmountInput" placeholder="e.g. 1000" min="0"></div>
+    <button class="btn btn-primary btn-block" onclick="setDues()">Save Dues Amount</button>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  const today = new Date();
+  document.getElementById('monthFilter').value = today.toISOString().slice(0,7);
+  document.getElementById('duesMonth').value = today.toISOString().slice(0,7);
+  loadFinancials();
+}
+async function loadFinancials() {
+  const month = document.getElementById('monthFilter').value;
+  try {
+    const res = await API.getFinancials(month);
+    if (res?.summary) {
+      document.getElementById('totalCollected').textContent = Utils.currency(res.summary.total_collected);
+      document.getElementById('totalPending').textContent = Utils.currency(res.summary.total_pending);
+      document.getElementById('uniquePayers').textContent = res.summary.unique_payers;
+    }
+    if (res?.dues_amount) document.getElementById('duesAmount').textContent = Utils.currency(res.dues_amount);
+
+    // Dues table
+    const duesContainer = document.getElementById('duesTable');
+    if (res?.dues_payers?.length) {
+      duesContainer.innerHTML = `<table class="admin-table"><thead><tr><th>Member</th><th>Dues Status</th></tr></thead><tbody>${res.dues_payers.map(d => `<tr><td>${d.full_name}</td><td><span class="badge badge-${d.status==='paid'?'success':'warning'}">${d.status}</span></td></tr>`).join('')}</tbody></table>`;
+    } else { duesContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-500)">No dues data for selected month</div>'; }
+
+    // Transactions
+    const txContainer = document.getElementById('transactionsTable');
+    if (res?.transactions?.length) {
+      txContainer.innerHTML = `<table class="admin-table"><thead><tr><th>Member</th><th>Amount</th><th>Category</th><th>Date</th><th>Reference</th><th>Status</th></tr></thead><tbody>${res.transactions.map(t => `<tr><td>${t.full_name}</td><td style="font-weight:700">${Utils.currency(t.amount)}</td><td><span class="badge badge-primary">${t.category}</span></td><td>${Utils.formatDate(t.created_at)}</td><td style="font-size:11px;color:var(--gray-500)">${t.paystack_reference||'-'}</td><td><span class="badge badge-${t.status==='success'?'success':'warning'}">${t.status}</span></td></tr>`).join('')}</tbody></table>`;
+    } else { txContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-500)">No transactions for selected month</div>'; }
+  } catch(e) { Toast.error('Error loading financials'); }
+}
+async function setDues() {
+  const amount = document.getElementById('duesAmountInput').value;
+  const month = document.getElementById('duesMonth').value;
+  if (!amount || !month) return Toast.error('Please fill in all fields');
+  const res = await API.setDues(amount, month);
+  if (res?.success) { Toast.success(res.message); Modal.close('duesModal'); loadFinancials(); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

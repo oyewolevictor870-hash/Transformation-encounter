@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sermons | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/sermons.html" class="sidebar-link active"><span class="icon">🎙️</span> Sermons</a>
+      <a href="/member/bible-plan.html" class="sidebar-link"><span class="icon">📖</span> Bible Plan</a>
+      <a href="/member/resources.html" class="sidebar-link"><span class="icon">📚</span> Resources</a>
+      <a href="/member/chat.html" class="sidebar-link"><span class="icon">💬</span> Group Chat</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">🎙️ Sermons</div></div>
+      <div class="top-bar-right" id="uploadBtn" style="display:none"><button class="btn btn-primary btn-sm" onclick="Modal.open('uploadModal')">+ Upload Sermon</button></div>
+    </header>
+    <div class="content-area">
+      <!-- CURRENT PLAYER -->
+      <div id="playerCard" style="display:none;margin-bottom:24px" class="card" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:white">
+        <div style="display:flex;gap:16px;align-items:center">
+          <div style="font-size:40px">🎙️</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:16px" id="playerTitle">Sermon Title</div>
+            <div style="font-size:13px;opacity:0.7" id="playerSpeaker">Speaker</div>
+            <audio id="audioPlayer" controls style="width:100%;margin-top:8px;border-radius:8px"></audio>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEARCH -->
+      <div style="display:flex;gap:12px;margin-bottom:20px">
+        <input type="text" class="form-control" id="sermonSearch" placeholder="🔍 Search sermons or speakers..." style="flex:1" oninput="loadSermons()">
+      </div>
+
+      <!-- LIST -->
+      <div id="sermonsList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal" style="max-width:550px">
+    <div class="modal-header"><div class="modal-title">🎙️ Upload Sermon</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Title *</label><input class="form-control" id="uTitle" placeholder="Sermon title"></div>
+    <div class="form-group"><label class="form-label">Speaker *</label><input class="form-control" id="uSpeaker" placeholder="Speaker name"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="uDesc" rows="3"></textarea></div>
+    <div class="form-group"><label class="form-label">Series</label><input class="form-control" id="uSeries" placeholder="e.g. The Fire Within"></div>
+    <div class="form-group"><label class="form-label">Audio File (.mp3, .m4a, .wav)</label><input type="file" class="form-control" id="uAudio" accept="audio/*"></div>
+    <div class="form-group"><label class="form-label">Thumbnail (optional)</label><input type="file" class="form-control" id="uThumb" accept="image/*"></div>
+    <button class="btn btn-primary btn-block" onclick="uploadSermon()">Upload Sermon 🎙️</button>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  if (['worker','admin'].includes(currentUser.role)) document.getElementById('uploadBtn').style.display = 'block';
+  loadSermons();
+}
+async function loadSermons() {
+  const search = document.getElementById('sermonSearch').value;
+  const container = document.getElementById('sermonsList');
+  try {
+    const res = await API.getSermons(search ? { search } : {});
+    if (!res?.sermons?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">🎙️</div><h3>No sermons yet</h3><p>Check back after church meetings for sermon uploads</p></div>'; return; }
+    container.innerHTML = res.sermons.map(s => `
+      <div class="card" style="display:flex;gap:16px;align-items:flex-start;cursor:pointer" onclick="playSermon('${s.id}','${encodeURIComponent(s.title)}','${encodeURIComponent(s.speaker)}','${s.audio_url||''}')">
+        <div style="width:60px;height:60px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden">
+          ${s.thumbnail_url ? `<img src="${s.thumbnail_url}" style="width:100%;height:100%;object-fit:cover">` : '🎙️'}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:var(--primary);margin-bottom:4px">${s.title}</div>
+          <div style="font-size:13px;color:var(--gray-500)">🎤 ${s.speaker}</div>
+          ${s.series ? `<div style="font-size:12px;color:var(--gold-dark);margin-top:2px">📚 ${s.series}</div>` : ''}
+          ${s.description ? `<div style="font-size:13px;color:var(--gray-700);margin-top:6px;line-height:1.5">${s.description.slice(0,100)}...</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:12px;color:var(--gray-500)">${Utils.timeAgo(s.created_at)}</div>
+          ${s.audio_url ? '<div style="color:var(--primary);font-size:20px;margin-top:8px">▶️</div>' : ''}
+          <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="event.stopPropagation();bookmark('${s.id}')">🔖</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Could not load sermons</h3></div>'; }
+}
+function playSermon(id, title, speaker, url) {
+  if (!url) return Toast.info('No audio available for this sermon');
+  document.getElementById('playerCard').style.display = 'block';
+  document.getElementById('playerTitle').textContent = decodeURIComponent(title);
+  document.getElementById('playerSpeaker').textContent = '🎤 ' + decodeURIComponent(speaker);
+  document.getElementById('audioPlayer').src = url;
+  document.getElementById('audioPlayer').play();
+  document.getElementById('playerCard').scrollIntoView({ behavior: 'smooth' });
+}
+async function bookmark(id) {
+  const res = await API.bookmarkSermon(id);
+  if (res?.success) Toast.success(res.bookmarked ? 'Sermon bookmarked! 🔖' : 'Bookmark removed');
+}
+async function uploadSermon() {
+  const fd = new FormData();
+  fd.append('title', document.getElementById('uTitle').value);
+  fd.append('speaker', document.getElementById('uSpeaker').value);
+  fd.append('description', document.getElementById('uDesc').value);
+  fd.append('series', document.getElementById('uSeries').value);
+  const audio = document.getElementById('uAudio').files[0];
+  const thumb = document.getElementById('uThumb').files[0];
+  if (!audio) return Toast.error('Please select an audio file');
+  fd.append('audio', audio);
+  if (thumb) fd.append('thumbnail', thumb);
+  const res = await API.uploadSermon(fd);
+  if (res?.success) { Toast.success('Sermon uploaded! 🎙️'); Modal.close('uploadModal'); loadSermons(); }
+  else Toast.error(res?.message || 'Upload error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

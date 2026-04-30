@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post Content | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div><div class="sidebar-role-badge">Workers</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/post-content.html" class="sidebar-link active"><span class="icon">✏️</span> Post Content</a>
+      <a href="/member/approve-testimonies.html" class="sidebar-link"><span class="icon">✅</span> Approve Testimonies</a>
+      <a href="/member/manage-prayers.html" class="sidebar-link"><span class="icon">⚙️</span> Manage Prayers</a>
+      <a href="/member/workers-room.html" class="sidebar-link"><span class="icon">🔒</span> Workers Room</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">✏️ Post Content</div></div>
+    </header>
+    <div class="content-area" style="max-width:700px">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:20px">Create a New Post</div>
+        <div class="form-group">
+          <label class="form-label">Post Type</label>
+          <select class="form-control" id="postType" onchange="toggleSchedule()">
+            <option value="announcement">📢 Announcement</option>
+            <option value="devotional">📖 Devotional</option>
+            <option value="event_update">📅 Event Update</option>
+            <option value="general">💬 General Update</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Title *</label><input class="form-control" id="postTitle" placeholder="Post title"></div>
+        <div class="form-group"><label class="form-label">Content *</label><textarea class="form-control" id="postContent" rows="8" placeholder="Write your post content here..."></textarea></div>
+        <div class="form-group"><label class="form-label">Image (optional)</label><input type="file" class="form-control" id="postImage" accept="image/*"></div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="checkbox" id="postPinned"> 📌 Pin this post (keeps it at top)</label>
+        </div>
+        <div class="form-group" id="scheduleGroup">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;margin-bottom:10px"><input type="checkbox" id="scheduleCheck" onchange="toggleDateInput()"> ⏰ Schedule for later</label>
+          <input type="datetime-local" class="form-control" id="scheduleDate" style="display:none">
+        </div>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" onclick="previewPost()">👁 Preview</button>
+          <button class="btn btn-primary btn-lg" style="flex:1" onclick="submitPost()">Publish Post 📢</button>
+        </div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div id="previewCard" style="display:none" class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--gold-dark);text-transform:uppercase;margin-bottom:12px">📋 Preview</div>
+        <div id="previewContent"></div>
+      </div>
+
+      <!-- SET SCRIPTURE -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="margin-bottom:16px">📖 Set Scripture of the Day</div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-control" id="sDate"></div>
+        <div class="form-group"><label class="form-label">Reference (e.g. John 3:16)</label><input class="form-control" id="sRef" placeholder="Book Chapter:Verse"></div>
+        <div class="form-group"><label class="form-label">Scripture Text</label><textarea class="form-control" id="sText" rows="3"></textarea></div>
+        <div class="form-group"><label class="form-label">Reflection</label><textarea class="form-control" id="sReflection" rows="3" placeholder="Brief reflection or application..."></textarea></div>
+        <button class="btn btn-primary btn-block" onclick="saveScripture()">Save Scripture 📖</button>
+      </div>
+
+      <!-- PRAYER POINTS -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="margin-bottom:16px">📌 Post Prayer Points</div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-control" id="ppDate"></div>
+        <div class="form-group"><label class="form-label">Title</label><input class="form-control" id="ppTitle" placeholder="e.g. Today's Prayer Focus"></div>
+        <div class="form-group"><label class="form-label">Prayer Points</label><textarea class="form-control" id="ppPoints" rows="5" placeholder="1. Pray for...\n2. Intercede for...\n3. Declare..."></textarea></div>
+        <div class="form-group"><label class="form-label">Supporting Scripture</label><input class="form-control" id="ppScripture" placeholder="e.g. Jeremiah 33:3"></div>
+        <button class="btn btn-primary btn-block" onclick="savePrayerPoints()">Post Prayer Points 📌</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  const user = Utils.requireRole(['worker','admin']);
+  if (!user) return;
+  document.getElementById('sidebarName').textContent = user.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(user.full_name);
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('sDate').value = today;
+  document.getElementById('ppDate').value = today;
+}
+function toggleDateInput() {
+  document.getElementById('scheduleDate').style.display = document.getElementById('scheduleCheck').checked ? 'block' : 'none';
+}
+function previewPost() {
+  const title = document.getElementById('postTitle').value;
+  const content = document.getElementById('postContent').value;
+  const type = document.getElementById('postType').value;
+  if (!title && !content) return Toast.error('Add some content first');
+  document.getElementById('previewCard').style.display = 'block';
+  document.getElementById('previewContent').innerHTML = `<div style="font-size:13px;font-weight:700;color:var(--gold-dark);text-transform:uppercase;margin-bottom:8px">${{announcement:'📢 Announcement',devotional:'📖 Devotional',event_update:'📅 Event',general:'💬 Update'}[type]}</div>${title?`<div style="font-weight:700;font-size:20px;color:var(--primary);margin-bottom:12px">${title}</div>`:''}<div style="font-size:14px;color:var(--gray-700);line-height:1.7;white-space:pre-line">${content}</div>`;
+}
+async function submitPost() {
+  const title = document.getElementById('postTitle').value.trim();
+  const content = document.getElementById('postContent').value.trim();
+  if (!title || !content) return Toast.error('Title and content are required');
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('content', content);
+  fd.append('type', document.getElementById('postType').value);
+  fd.append('is_pinned', document.getElementById('postPinned').checked);
+  if (document.getElementById('scheduleCheck').checked && document.getElementById('scheduleDate').value) {
+    fd.append('scheduled_at', document.getElementById('scheduleDate').value);
+  }
+  const img = document.getElementById('postImage').files[0];
+  if (img) fd.append('image', img);
+  const res = await API.createPost(fd);
+  if (res?.success) { Toast.success('Post published! 📢'); document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = ''; document.getElementById('previewCard').style.display = 'none'; }
+  else Toast.error(res?.message || 'Error posting');
+}
+async function saveScripture() {
+  const res = await API.post('/misc/scripture', { date: document.getElementById('sDate').value, reference: document.getElementById('sRef').value, text: document.getElementById('sText').value, reflection: document.getElementById('sReflection').value });
+  if (res?.success) Toast.success('Scripture of the Day saved! 📖');
+  else Toast.error(res?.message || 'Error');
+}
+async function savePrayerPoints() {
+  const res = await API.post('/misc/prayer-points', { date: document.getElementById('ppDate').value, title: document.getElementById('ppTitle').value, points: document.getElementById('ppPoints').value, scripture: document.getElementById('ppScripture').value });
+  if (res?.success) Toast.success('Prayer points posted! 📌');
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

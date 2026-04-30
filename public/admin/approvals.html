@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approvals | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link active"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="admin-page-title">⏳ Pending Member Approvals</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="approveAll()">✅ Approve All</button>
+    </header>
+    <div class="admin-content">
+      <div class="alert alert-info">New registrations require admin approval. Review and approve or reject applicants below.</div>
+      <div id="pendingCount" style="font-size:14px;color:var(--gray-500);margin-bottom:16px"></div>
+      <div id="pendingList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadPending();
+}
+async function loadPending() {
+  const container = document.getElementById('pendingList');
+  try {
+    const res = await API.getPendingApprovals();
+    const members = res?.pending || [];
+    document.getElementById('pendingCount').textContent = `${members.length} application(s) awaiting review`;
+    if (!members.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><h3>All clear!</h3><p>No pending applications at this time.</p></div>';
+      return;
+    }
+    container.innerHTML = members.map(m => `
+      <div class="approval-card">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0">${Utils.initials(m.full_name)}</div>
+        <div class="approval-info">
+          <div class="approval-title">${m.full_name}</div>
+          <div class="approval-excerpt">📧 ${m.email} ${m.phone ? ' • 📞 ' + m.phone : ''}</div>
+          <div class="approval-submitter">Applied: ${Utils.formatDateTime(m.created_at)} ${m.birthday ? ' • 🎂 DOB: ' + Utils.formatDate(m.birthday) : ''}</div>
+        </div>
+        <div class="approval-actions">
+          <button class="btn btn-primary btn-sm" onclick="approve('${m.id}','${m.full_name}',this)">✅ Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="reject('${m.id}','${m.full_name}')">❌ Reject</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading</div>'; }
+}
+async function approve(id, name, btn) {
+  btn.textContent = 'Approving...'; btn.disabled = true;
+  const res = await API.approveMember(id);
+  if (res?.success) { Toast.success(`${name} approved! 🎉 They have been notified.`); loadPending(); }
+  else { Toast.error(res?.message || 'Error'); btn.textContent = '✅ Approve'; btn.disabled = false; }
+}
+async function reject(id, name) {
+  if (!confirm(`Reject ${name}'s application? They will be notified.`)) return;
+  const res = await API.delete(`/admin/member/${id}`);
+  if (res?.success) { Toast.success(`${name}'s application rejected.`); loadPending(); }
+  else Toast.error(res?.message || 'Error');
+}
+async function approveAll() {
+  if (!confirm('Approve ALL pending applications?')) return;
+  const res = await API.getPendingApprovals();
+  const members = res?.pending || [];
+  let count = 0;
+  for (const m of members) {
+    const r = await API.approveMember(m.id);
+    if (r?.success) count++;
+  }
+  Toast.success(`${count} members approved! 🎉`);
+  loadPending();
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

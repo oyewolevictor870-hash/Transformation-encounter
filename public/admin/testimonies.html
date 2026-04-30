@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Testimonies | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link active"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)"><a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-page-title">✨ Testimony Management</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="loadTestimonies('pending')">⏳ Pending</button>
+        <button class="btn btn-outline btn-sm" onclick="loadTestimonies('approved')">✅ Approved</button>
+        <button class="btn btn-outline btn-sm" onclick="loadTestimonies('rejected')">❌ Rejected</button>
+      </div>
+    </header>
+    <div class="admin-content">
+      <div id="testimonyCount" style="font-size:13px;color:var(--gray-500);margin-bottom:16px"></div>
+      <div id="testimoniesList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadTestimonies('pending');
+}
+async function loadTestimonies(status) {
+  const container = document.getElementById('testimoniesList');
+  container.innerHTML = '<div class="flex-center" style="padding:40px"><div class="spinner"></div></div>';
+  try {
+    const res = await API.get(`/testimonies/admin?status=${status}`);
+    const testimonies = res?.testimonies || [];
+    document.getElementById('testimonyCount').textContent = `${testimonies.length} ${status} testimonies`;
+    if (!testimonies.length) { container.innerHTML = `<div class="empty-state"><div class="icon">✨</div><h3>No ${status} testimonies</h3></div>`; return; }
+    container.innerHTML = testimonies.map(t => `<div class="approval-card">
+      <div style="flex:1">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">${Utils.initials(t.full_name)}</div>
+          <div><div style="font-weight:700;color:var(--primary)">${t.full_name}</div><div style="font-size:12px;color:var(--gray-500)">${Utils.formatDateTime(t.created_at)} • <span class="badge badge-gold">${t.category?.replace('_',' ')}</span></div></div>
+        </div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">${t.title}</div>
+        <div style="font-size:13px;color:var(--gray-700);line-height:1.6">${t.content.slice(0,200)}${t.content.length > 200 ? '...' : ''}</div>
+        ${t.media_url ? `<div style="margin-top:8px"><img src="${t.media_url}" style="max-height:120px;border-radius:6px">` : ''}
+      </div>
+      ${status === 'pending' ? `<div class="approval-actions" style="flex-direction:column;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="approveTestimony('${t.id}',this)">✅ Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectTestimony('${t.id}')">❌ Reject</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTestimony('${t.id}')">🗑️ Delete</button>
+      </div>` : `<div class="approval-actions"><button class="btn btn-danger btn-sm" onclick="deleteTestimony('${t.id}')">🗑️ Delete</button></div>`}
+    </div>`).join('');
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading</div>'; }
+}
+async function approveTestimony(id, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  const res = await API.approveTestimony(id);
+  if (res?.success) { Toast.success('Testimony approved! 🙌'); loadTestimonies('pending'); }
+  else { Toast.error(res?.message || 'Error'); btn.disabled = false; btn.textContent = '✅ Approve'; }
+}
+async function rejectTestimony(id) {
+  const reason = prompt('Reason for rejection:') || '';
+  const res = await API.rejectTestimony(id, reason);
+  if (res?.success) { Toast.success('Rejected.'); loadTestimonies('pending'); }
+  else Toast.error(res?.message || 'Error');
+}
+async function deleteTestimony(id) {
+  if (!confirm('Permanently delete this testimony?')) return;
+  const res = await API.delete(`/testimonies/${id}`);
+  if (res?.success) { Toast.success('Deleted.'); loadTestimonies('pending'); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Testimonies | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div><div class="sidebar-role-badge" id="sidebarRole">Member</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/prayer-requests.html" class="sidebar-link"><span class="icon">🙏</span> Prayer Requests</a>
+      <a href="/member/testimonies.html" class="sidebar-link active"><span class="icon">✨</span> Testimonies</a>
+      <a href="/member/events.html" class="sidebar-link"><span class="icon">📅</span> Events</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+      <a href="/member/chat.html" class="sidebar-link"><span class="icon">💬</span> Group Chat</a>
+      <a href="/member/giving.html" class="sidebar-link"><span class="icon">💰</span> Giving & Dues</a>
+      <a href="/member/prayer-room.html" class="sidebar-link"><span class="icon">📻</span> Prayer Room</a>
+      <a href="/member/celebrations.html" class="sidebar-link"><span class="icon">🎂</span> Celebrations</a>
+      <a href="/member/directory.html" class="sidebar-link"><span class="icon">👥</span> Directory</a>
+    </nav>
+    <div class="sidebar-footer"><a href="/member/profile.html" class="sidebar-link"><span class="icon">👤</span> My Profile</a><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">✨ Testimonies</div></div>
+      <div class="top-bar-right"><button class="btn btn-gold btn-sm" onclick="Modal.open('testimonyModal')">+ Share Testimony</button></div>
+    </header>
+    <div class="content-area">
+      <div class="alert alert-info" style="margin-bottom:20px">✅ Testimonies are reviewed and approved before appearing publicly. Share what God has done in your life!</div>
+      <div id="testimonyList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+<!-- TESTIMONY MODAL -->
+<div class="modal-overlay" id="testimonyModal">
+  <div class="modal" style="max-width:550px">
+    <div class="modal-header"><div class="modal-title">✨ Share Your Testimony</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Title</label><input type="text" class="form-control" id="tTitle" placeholder="e.g. God healed my father!"></div>
+    <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="tCategory"><option value="healing">Healing</option><option value="breakthrough">Breakthrough</option><option value="provision">Provision</option><option value="salvation">Salvation</option><option value="answered_prayer">Answered Prayer</option><option value="other">Other</option></select></div>
+    <div class="form-group"><label class="form-label">Your Testimony *</label><textarea class="form-control" id="tContent" rows="7" placeholder="Share what God has done for you... Let your faith story encourage others!"></textarea></div>
+    <div class="form-group"><label class="form-label">Supporting Photo (optional)</label><input type="file" class="form-control" id="tPhoto" accept="image/*"></div>
+    <button class="btn btn-gold btn-block btn-lg" onclick="submitTestimony()">Submit for Review 🙏</button>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  loadTestimonies();
+}
+async function loadTestimonies() {
+  const container = document.getElementById('testimonyList');
+  try {
+    const res = await API.getTestimonies();
+    if (!res?.testimonies?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">✨</div><h3>No testimonies yet</h3><p>Be the first to share what God has done!</p></div>'; return; }
+    container.innerHTML = res.testimonies.map(t => `
+      <div class="testimony-card">
+        <div class="testimony-header">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px">${Utils.initials(t.full_name)}</div>
+          <div style="flex:1"><div style="font-weight:700;color:var(--primary)">${t.full_name}</div><div class="text-muted">${Utils.timeAgo(t.approved_at)}</div></div>
+          <span class="badge badge-gold">${t.category?.replace('_',' ')}</span>
+        </div>
+        <div class="testimony-title">${t.title}</div>
+        <div class="testimony-body">${t.content}</div>
+        ${t.media_url ? `<img src="${t.media_url}" style="width:100%;border-radius:8px;margin-top:12px;max-height:300px;object-fit:cover" alt="Testimony photo">` : ''}
+        <div style="display:flex;gap:12px;margin-top:16px;align-items:center;border-top:1px solid var(--gray-200);padding-top:12px">
+          <span style="font-size:13px;color:var(--gray-500)">🙌 ${t.like_count || 0} people encouraged</span>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="likeTestimony('${t.id}', this)">🙏 Amen!</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Could not load testimonies</h3></div>'; }
+}
+async function likeTestimony(id, btn) {
+  const res = await API.post(`/testimonies/${id}/like`);
+  if (res?.success) { btn.textContent = res.liked ? '🙌 Amen! (Liked)' : '🙏 Amen!'; Toast.success(res.liked ? 'You said Amen! 🙌' : 'Unliked'); }
+}
+async function submitTestimony() {
+  const title = document.getElementById('tTitle').value.trim();
+  const content = document.getElementById('tContent').value.trim();
+  if (!title || !content) return Toast.error('Please fill in title and testimony');
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('content', content);
+  fd.append('category', document.getElementById('tCategory').value);
+  const photo = document.getElementById('tPhoto').files[0];
+  if (photo) fd.append('media', photo);
+  const res = await API.submitTestimony(fd);
+  if (res?.success) { Toast.success('Testimony submitted for review! 🙌 Thank God!'); Modal.close('testimonyModal'); }
+  else Toast.error(res?.message || 'Error submitting testimony');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

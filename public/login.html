@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Transformation Encounter</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1A0F45 0%, #2D1B69 50%, #4A2D9A 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .auth-logo .flame {
+      font-size: 48px;
+    }
+
+    .auth-logo h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-top: 8px;
+    }
+
+    .auth-logo p {
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+
+    .auth-footer a {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--gray-500);
+      font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid var(--gray-200);
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+    }
+
+    .back-link a {
+      color: white;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="flame">🔥</div>
+        <h1>Transformation Encounter</h1>
+        <p>Sign in to your account</p>
+      </div>
+      <div id="alertBox"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="email" placeholder="your@email.com" required
+            autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;justify-content:space-between">Password<a href="forgot.html"
+              style="font-weight:500;color:var(--primary);font-size:12px">Forgot password?</a></label>
+          <div style="position:relative">
+            <input type="password" class="form-control" id="password" placeholder="Enter your password" required
+              autocomplete="current-password">
+            <button type="button" onclick="togglePwd()"
+              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px"
+              id="eyeBtn">👁</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Sign In</button>
+      </form>
+      <div class="divider">or</div>
+      <div class="auth-footer">Don't have an account? <a href="/register.html">Register here</a></div>
+    </div>
+    <div class="back-link"><a href="/">← Back to Home</a></div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    const existingUser = API.getUser();
+    if (existingUser) redirectByRole(existingUser.role);
+
+    function redirectByRole(role) {
+      if (role === 'admin') window.location.href = '/admin/index.html';
+      else if (role === 'worker') window.location.href = '/member/dashboard.html';
+      else window.location.href = '/member/dashboard.html';
+    }
+
+    function togglePwd() {
+      const input = document.getElementById('password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function showAlert(msg, type = 'danger') {
+      document.getElementById('alertBox').innerHTML = `<div class="alert alert-${type}">⚠️ ${msg}</div>`;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      btn.textContent = 'Signing in...'; btn.disabled = true;
+      document.getElementById('alertBox').innerHTML = '';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await API.login(email, password);
+      if (res?.success) {
+        API.setSession(res.token, res.user);
+        Toast.success('Welcome back! Redirecting...');
+        setTimeout(() => redirectByRole(res.user.role), 800);
+      } else {
+        showAlert(res?.message || 'Login failed. Check your credentials.');
+        btn.textContent = 'Sign In'; btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+
+</html>

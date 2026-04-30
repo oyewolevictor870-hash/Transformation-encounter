@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Rooms | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link active"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)"><a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar"><div class="admin-page-title">📻 Voice Room Control</div><button class="btn btn-primary btn-sm" onclick="Modal.open('createRoomModal')">+ Open New Room</button></header>
+    <div class="admin-content">
+      <div class="alert alert-info">When you open a prayer room, all members will be notified via in-app notification and can join immediately. You can close rooms at any time.</div>
+      <div id="roomsList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE ROOM MODAL -->
+<div class="modal-overlay" id="createRoomModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📻 Open Voice Room</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Room Name *</label><input class="form-control" id="rName" placeholder="e.g. Night Vigil Prayer Room"></div>
+    <div class="form-group"><label class="form-label">Type</label>
+      <select class="form-control" id="rType">
+        <option value="general_prayer">General Prayer</option>
+        <option value="intercessory">Intercessory Prayer</option>
+        <option value="bible_study">Bible Study</option>
+        <option value="workers_meeting">Workers Meeting</option>
+        <option value="praise">Praise & Worship</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Description (optional)</label><textarea class="form-control" id="rDesc" rows="2" placeholder="Brief description of what this room is for..."></textarea></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:16px"><input type="checkbox" id="notifyAll" checked> 📣 Notify all members when room opens</label>
+    <button class="btn btn-primary btn-block btn-lg" onclick="openRoom()">📻 Open Voice Room</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadRooms();
+}
+async function loadRooms() {
+  const container = document.getElementById('roomsList');
+  try {
+    const res = await API.getVoiceRooms();
+    if (!res?.rooms?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">📻</div><h3>No voice rooms</h3><p>Open a room to let members join for prayer or study</p></div>'; return; }
+    container.innerHTML = res.rooms.map(r => `<div class="card" style="margin-bottom:16px;border-left:4px solid ${r.is_active?'var(--success)':'var(--gray-300)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-weight:700;font-size:18px;color:var(--primary)">📻 ${r.name}</div>
+          <div style="font-size:13px;color:var(--gray-500);margin-top:4px"><span class="badge badge-primary">${r.type?.replace('_',' ')}</span> • Opened: ${Utils.formatDateTime(r.created_at)}</div>
+          ${r.description ? `<div style="font-size:13px;color:var(--gray-700);margin-top:6px">${r.description}</div>` : ''}
+        </div>
+        <span class="badge badge-${r.is_active?'success':'warning'} badge-lg">${r.is_active?'🔴 LIVE':'⏹ Closed'}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${r.is_active ? `<button class="btn btn-danger btn-sm" onclick="closeRoom('${r.id}')">⏹ Close Room</button><a href="/member/prayer-room.html" class="btn btn-primary btn-sm">🎙️ Join Room</a>` : `<button class="btn btn-primary btn-sm" onclick="reopenRoom('${r.id}')">▶️ Reopen</button>`}
+      </div>
+    </div>`).join('');
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading</div>'; }
+}
+async function openRoom() {
+  const data = { name: document.getElementById('rName').value, type: document.getElementById('rType').value, description: document.getElementById('rDesc').value, notify_all: document.getElementById('notifyAll').checked };
+  if (!data.name) return Toast.error('Please enter a room name');
+  const res = await API.openVoiceRoom(data);
+  if (res?.success) { Toast.success('Voice room opened! Members have been notified. 📻'); Modal.close('createRoomModal'); loadRooms(); document.getElementById('rName').value = ''; document.getElementById('rDesc').value = ''; }
+  else Toast.error(res?.message || 'Error');
+}
+async function closeRoom(id) {
+  if (!confirm('Close this voice room?')) return;
+  const res = await API.closeVoiceRoom(id);
+  if (res?.success) { Toast.success('Room closed.'); loadRooms(); }
+  else Toast.error(res?.message || 'Error');
+}
+async function reopenRoom(id) {
+  const res = await API.put(`/admin/voice-rooms/${id}/reopen`);
+  if (res?.success) { Toast.success('Room reopened! 📻'); loadRooms(); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

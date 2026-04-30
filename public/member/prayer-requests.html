@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prayer Requests | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css">
+<link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div><div class="sidebar-role-badge" id="sidebarRole">Member</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/prayer-requests.html" class="sidebar-link active"><span class="icon">🙏</span> Prayer Requests</a>
+      <a href="/member/prayer-wall.html" class="sidebar-link"><span class="icon">🧱</span> Prayer Wall</a>
+      <a href="/member/testimonies.html" class="sidebar-link"><span class="icon">✨</span> Testimonies</a>
+      <a href="/member/questions.html" class="sidebar-link"><span class="icon">❓</span> Questions</a>
+      <a href="/member/events.html" class="sidebar-link"><span class="icon">📅</span> Events</a>
+      <a href="/member/sermons.html" class="sidebar-link"><span class="icon">🎙️</span> Sermons</a>
+      <a href="/member/chat.html" class="sidebar-link"><span class="icon">💬</span> Group Chat</a>
+      <a href="/member/giving.html" class="sidebar-link"><span class="icon">💰</span> Giving & Dues</a>
+      <a href="/member/prayer-room.html" class="sidebar-link"><span class="icon">📻</span> Prayer Room</a>
+      <a href="/member/celebrations.html" class="sidebar-link"><span class="icon">🎂</span> Celebrations</a>
+      <a href="/member/directory.html" class="sidebar-link"><span class="icon">👥</span> Directory</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/member/profile.html" class="sidebar-link"><span class="icon">👤</span> My Profile</a>
+      <a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">🙏 Prayer Requests</div></div>
+      <div class="top-bar-right"><button class="btn btn-primary btn-sm" onclick="Modal.open('prayerModal')">+ Submit Prayer</button></div>
+    </header>
+
+    <div class="content-area">
+      <!-- Emergency prayer banner for workers -->
+      <div id="emergencyBanner" style="display:none;margin-bottom:16px" class="alert alert-danger">
+        🚨 <strong>Emergency Prayer!</strong> There are urgent prayer requests needing immediate attention.
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-type="personal" onclick="loadPrayers('personal')">My Prayers</button>
+        <button class="tab-btn" data-type="wall" onclick="loadPrayers('wall')">Prayer Wall</button>
+        <button class="tab-btn" data-type="emergency" onclick="loadPrayers('emergency')" id="emergencyTab">🚨 Emergency</button>
+      </div>
+
+      <div id="prayersContainer">
+        <div class="flex-center" style="padding:60px"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUBMIT PRAYER MODAL -->
+<div class="modal-overlay" id="prayerModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🙏 Submit Prayer Request</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Prayer Title</label><input type="text" class="form-control" id="prayerTitle" placeholder="Brief title for your request"></div>
+    <div class="form-group"><label class="form-label">Prayer Request</label><textarea class="form-control" id="prayerContent" rows="5" placeholder="Share what you need prayer for..."></textarea></div>
+    <div class="form-group" style="display:flex;gap:12px;align-items:center">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="prayerAnon"> Submit anonymously</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="prayerWall"> Share on Prayer Wall</label>
+    </div>
+    <div class="form-group" id="emergencyRow">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--danger)"><input type="checkbox" id="prayerEmergency"> 🚨 This is an emergency (urgent)</label>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="submitPrayer()">Submit Prayer Request 🙏</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  document.getElementById('sidebarRole').textContent = currentUser.role;
+  loadPrayers('personal');
+}
+
+async function loadPrayers(type) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+  const container = document.getElementById('prayersContainer');
+  container.innerHTML = '<div class="flex-center" style="padding:60px"><div class="spinner"></div></div>';
+  try {
+    let res;
+    if (type === 'personal') res = await API.getPrayers();
+    else if (type === 'wall') res = await API.get('/prayers/wall');
+    else res = await API.get('/prayers/emergency');
+    const prayers = res?.prayers || [];
+    if (!prayers.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">🙏</div><h3>No prayer requests here</h3><p>Submit a prayer request to get started</p></div>';
+      return;
+    }
+    container.innerHTML = prayers.map(p => `
+      <div class="prayer-card ${p.is_emergency ? 'emergency' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div class="prayer-title">${p.is_emergency ? '🚨 ' : ''}${p.title}</div>
+          <div>${Utils.timeAgo(p.created_at)}</div>
+        </div>
+        <div class="prayer-content">${p.content}</div>
+        <div class="prayer-footer">
+          <div class="prayer-count">🙏 ${p.prayer_count || 0} people praying</div>
+          <div style="display:flex;gap:8px">
+            ${p.is_on_wall ? '<span class="badge badge-primary">On Wall</span>' : ''}
+            ${p.status !== 'active' ? `<span class="badge badge-${p.status === 'answered' ? 'success' : 'gold'}">${p.status}</span>` : ''}
+            <button class="btn btn-outline btn-sm" onclick="prayFor('${p.id}')">🙏 Pray</button>
+            ${p.user_id === currentUser.id ? `<button class="btn btn-sm" style="background:var(--success);color:white" onclick="markAnswered('${p.id}')">✅ Answered!</button>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Could not load prayers</h3></div>'; }
+}
+
+async function prayFor(id) {
+  const res = await API.prayFor(id);
+  if (res?.success) Toast.success('Your prayer has been counted! 🙏');
+  else Toast.error(res?.message || 'Error');
+}
+
+async function markAnswered(id) {
+  const res = await API.put(`/prayers/${id}/answered`);
+  if (res?.success) { Toast.success('Praise God for answered prayer! 🙌'); loadPrayers('personal'); }
+}
+
+async function submitPrayer() {
+  const title = document.getElementById('prayerTitle').value.trim();
+  const content = document.getElementById('prayerContent').value.trim();
+  if (!title || !content) return Toast.error('Please fill in all fields');
+  const data = { title, content, is_anonymous: document.getElementById('prayerAnon').checked, is_on_wall: document.getElementById('prayerWall').checked, is_emergency: document.getElementById('prayerEmergency').checked };
+  const res = await API.submitPrayer(data);
+  if (res?.success) { Toast.success('Prayer request submitted! 🙏'); Modal.close('prayerModal'); document.getElementById('prayerTitle').value = ''; document.getElementById('prayerContent').value = ''; loadPrayers('personal'); }
+  else Toast.error(res?.message || 'Error submitting prayer');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>

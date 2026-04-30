@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polls | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/member.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><div class="sidebar-brand"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div><div><div class="sidebar-title">TE Group</div></div></div></div>
+    <div class="sidebar-user"><div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">?</div><div><div class="sidebar-username" id="sidebarName">Loading...</div></div></div>
+    <nav class="sidebar-nav">
+      <a href="/member/dashboard.html" class="sidebar-link"><span class="icon">🏠</span> Home Feed</a>
+      <a href="/member/polls.html" class="sidebar-link active"><span class="icon">📊</span> Polls</a>
+    </nav>
+    <div class="sidebar-footer"><a href="#" onclick="logout()" class="sidebar-link"><span class="icon">🚪</span> Sign Out</a></div>
+  </aside>
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button><div class="page-title">📊 Community Polls</div></div>
+      <div id="createPollBtn" style="display:none"><button class="btn btn-primary btn-sm" onclick="Modal.open('pollModal')">+ Create Poll</button></div>
+    </header>
+    <div class="content-area">
+      <div id="pollsList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE POLL MODAL -->
+<div class="modal-overlay" id="pollModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📊 Create Poll</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Question *</label><input class="form-control" id="pollQuestion" placeholder="e.g. Which day works best for vigil?"></div>
+    <div class="form-group"><label class="form-label">End Date (optional)</label><input type="datetime-local" class="form-control" id="pollEnd"></div>
+    <div id="pollOptions">
+      <div class="form-group"><label class="form-label">Options</label><input class="form-control poll-opt" placeholder="Option 1" style="margin-bottom:8px"><input class="form-control poll-opt" placeholder="Option 2" style="margin-bottom:8px"></div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-bottom:12px" onclick="addOption()">+ Add Option</button>
+    <button class="btn btn-primary btn-block" onclick="createPoll()">Create Poll 📊</button>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+let currentUser = null;
+async function init() {
+  currentUser = Utils.requireAuth();
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.full_name;
+  document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
+  if (currentUser.role === 'admin') document.getElementById('createPollBtn').style.display = 'block';
+  loadPolls();
+}
+async function loadPolls() {
+  const container = document.getElementById('pollsList');
+  try {
+    const res = await API.getPolls();
+    if (!res?.polls?.length) { container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><h3>No active polls</h3><p>Polls will appear here when created by the admin</p></div>'; return; }
+    container.innerHTML = res.polls.map(p => {
+      const totalVotes = (p.options||[]).reduce((s,o) => s + (o.votes||0), 0);
+      return `<div class="card" style="margin-bottom:20px">
+        <div style="font-weight:700;font-size:18px;color:var(--primary);margin-bottom:16px">${p.question}</div>
+        <div>${(p.options||[]).map(o => {
+          const pct = totalVotes ? Math.round(o.votes/totalVotes*100) : 0;
+          return `<div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;font-weight:500"><span>${o.text}</span><span>${o.votes||0} votes (${pct}%)</span></div>
+            <div style="height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="height:100%;background:linear-gradient(to right,var(--primary),var(--primary-light));border-radius:4px;width:${pct}%;transition:width 0.5s"></div></div>
+            <button class="btn btn-outline btn-sm" style="margin-top:6px;font-size:11px" onclick="vote('${p.id}','${o.id}')">Vote for this</button>
+          </div>`;}).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:12px;border-top:1px solid var(--gray-200);padding-top:12px">Total votes: ${totalVotes} ${p.end_date ? ' • Ends: ' + Utils.formatDate(p.end_date) : ''}</div>
+      </div>`;}).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading polls</h3></div>'; }
+}
+async function vote(pollId, optionId) {
+  const res = await API.vote(pollId, optionId);
+  if (res?.success) { Toast.success('Vote recorded! 📊'); loadPolls(); }
+  else Toast.error(res?.message || 'Could not vote. You may have already voted.');
+}
+function addOption() {
+  const input = document.createElement('input');
+  input.className = 'form-control poll-opt';
+  input.placeholder = `Option ${document.querySelectorAll('.poll-opt').length + 1}`;
+  input.style.marginBottom = '8px';
+  document.getElementById('pollOptions').querySelector('.form-group').appendChild(input);
+}
+async function createPoll() {
+  const question = document.getElementById('pollQuestion').value.trim();
+  const options = [...document.querySelectorAll('.poll-opt')].map(i => i.value.trim()).filter(Boolean);
+  if (!question) return Toast.error('Please enter a question');
+  if (options.length < 2) return Toast.error('Add at least 2 options');
+  const end = document.getElementById('pollEnd').value;
+  const res = await API.post('/polls', { question, options, end_date: end || null });
+  if (res?.success) { Toast.success('Poll created! 📊'); Modal.close('pollModal'); loadPolls(); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
+</body>
+</html>
