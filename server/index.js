@@ -2,6 +2,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const app = require('./app');
 const pool = require('./config/db');
+const migrate = require('./config/migrate');
 require('./jobs/cron');
 
 const PORT = process.env.PORT || 3000;
@@ -101,7 +102,9 @@ io.on('connection', (socket) => {
 app.set('io', io);
 app.set('connectedUsers', connectedUsers);
 
-server.listen(PORT, () => {
-    console.log(`\n🔥 Transformation Encounter Server running on port ${PORT}`);
-    console.log(`🌐 Open: http://localhost:${PORT}\n`);
+ migrate().then(() => {
+    server.listen(PORT, () => {
+        console.log(`🔥 Transformation Encounter Server running on port ${PORT}`);
+        console.log(`🌐 Open: http://localhost:${PORT}`);
+    });
 });
