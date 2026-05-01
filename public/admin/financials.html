@@ -21,7 +21,7 @@
   </aside>
   <div class="admin-main">
     <header class="admin-topbar">
-      <div style="display:flex;align-items:center;gap:16px"><div class="admin-page-title">💰 Financial Dashboard</div></div>
+      <div style="display:flex;align-items:center;gap:16px"><button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button><div class="admin-page-title">💰 Financial Dashboard</div></div>
       <div style="display:flex;gap:12px;align-items:center">
         <input type="month" class="form-control" id="monthFilter" onchange="loadFinancials()" style="width:160px">
         <button class="btn btn-primary btn-sm" onclick="Modal.open('duesModal')">⚙️ Set Dues</button>
