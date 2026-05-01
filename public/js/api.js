@@ -5,7 +5,7 @@
 // ============================================
 
 const API = {
-    baseUrl: 'https://transformation-encounter.production.up.railway.app/api',
+    baseUrl: 'https://transformation-encounter-production.up.railway.app/api',
 
     getToken() {
         return localStorage.getItem('te_token');
