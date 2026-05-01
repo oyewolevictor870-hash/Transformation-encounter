@@ -25,7 +25,9 @@
   <div class="admin-main">
     <header class="admin-topbar">
       <div style="display:flex;align-items:center;gap:16px">
-        <div class="admin-page-title">⏳ Pending Member Approvals</div>
+        <div style="display:flex;align-items:center;gap:16px">
+    <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+    <div class="admin-page-title">⏳ Pending Member Approvals</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="approveAll()">✅ Approve All</button>
     </header>
