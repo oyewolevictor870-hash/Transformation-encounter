@@ -25,6 +25,7 @@ app.use('/api/polls', require('./routes/polls'));
 app.use('/api/resources', require('./routes/resources'));
 app.use('/api/misc', require('./routes/misc'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/login', require('./routes/login'));
 app.use('/api/celebrations', require('./routes/celebrations'));
 
 // Serve index.html for all non-API routes (SPA fallback)
