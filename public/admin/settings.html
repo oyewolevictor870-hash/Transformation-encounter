@@ -144,7 +144,7 @@ async function changePassword() {
   if (!oldPass || !newPass) return Toast.error('Please fill in all password fields');
   if (newPass !== confirmPass) return Toast.error('New passwords do not match');
   if (newPass.length < 8) return Toast.error('Password must be at least 8 characters');
-  const res = await API.put('/auth/change-password', { current_password: oldPass, new_password: newPass });
+ const res = await API.put('/auth/change-password', { current_password: oldPass, new_password: newPass });
   if (res?.success) { Toast.success('Password changed! 🔑'); document.getElementById('oldPass').value = ''; document.getElementById('newPass').value = ''; document.getElementById('confirmPass').value = ''; }
   else Toast.error(res?.message || 'Error changing password');
 }
