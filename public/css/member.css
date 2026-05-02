@@ -1024,6 +1024,9 @@
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
+       .menu-toggle {
+    display: block !important;
+}
     }
 
     .sidebar.open {
