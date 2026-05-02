@@ -1,11 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visitor Messages | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-    <p>coming soon</p>
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/polls.html" class="admin-nav-link"><span class="nav-icon">🗳️</span> Polls</a>
+      <a href="/admin/events.html" class="admin-nav-link"><span class="nav-icon">📅</span> Events</a>
+      <a href="/admin/logs.html" class="admin-nav-link"><span class="nav-icon">📋</span> Action Logs</a>
+      <a href="/admin/reports.html" class="admin-nav-link"><span class="nav-icon">📈</span> Reports</a>
+      <a href="/admin/visitors-contact.html" class="admin-nav-link active"><span class="nav-icon">📬</span> Visitor Messages</a>
+      <a href="/admin/content.html" class="admin-nav-link"><span class="nav-icon">🗂️</span> Content</a>
+      <a href="/admin/livestream.html" class="admin-nav-link"><span class="nav-icon">🎥</span> Livestream</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+        <div class="admin-page-title">📬 Visitor Messages</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadMessages()">🔄 Refresh</button>
+    </header>
+    <div class="admin-content">
+      <div class="alert alert-info">Messages submitted by visitors through the public contact form appear here.</div>
+      <div class="admin-table-wrapper">
+        <div id="messagesList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadMessages();
+}
+async function loadMessages() {
+  const container = document.getElementById('messagesList');
+  container.innerHTML = '<div class="flex-center" style="padding:40px"><div class="spinner"></div></div>';
+  try {
+    const res = await API.get('/misc/contact');
+    const messages = res?.messages || res?.contacts || [];
+    if (!messages.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-500)">📭 No visitor messages yet</div>';
+      return;
+    }
+    container.innerHTML = `<table class="admin-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Date</th></tr></thead>
+      <tbody>${messages.map(m => `<tr>
+        <td style="font-weight:600">${m.name || m.full_name || '—'}</td>
+        <td><a href="mailto:${m.email}" style="color:var(--primary)">${m.email || '—'}</a></td>
+        <td>${m.phone || '—'}</td>
+        <td style="max-width:300px;font-size:13px">${m.message || '—'}</td>
+        <td style="font-size:12px;white-space:nowrap">${Utils.formatDateTime(m.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading messages</div>'; }
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
 </body>
 </html>
