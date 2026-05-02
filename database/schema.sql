@@ -571,7 +571,15 @@ CREATE TABLE IF NOT EXISTS department_members (
     joined_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(department_id, user_id)
 );
-
+-- PASSWORD RESET TOKENS
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
 -- INDEXES for performance
 CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(is_published, published_at);
