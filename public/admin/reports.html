@@ -1,11 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-    
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/polls.html" class="admin-nav-link"><span class="nav-icon">🗳️</span> Polls</a>
+      <a href="/admin/events.html" class="admin-nav-link"><span class="nav-icon">📅</span> Events</a>
+      <a href="/admin/logs.html" class="admin-nav-link"><span class="nav-icon">📋</span> Action Logs</a>
+      <a href="/admin/reports.html" class="admin-nav-link active"><span class="nav-icon">📈</span> Reports</a>
+      <a href="/admin/visitors-contact.html" class="admin-nav-link"><span class="nav-icon">📬</span> Visitor Messages</a>
+      <a href="/admin/content.html" class="admin-nav-link"><span class="nav-icon">🗂️</span> Content</a>
+      <a href="/admin/livestream.html" class="admin-nav-link"><span class="nav-icon">🎥</span> Livestream</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+        <div class="admin-page-title">📈 Growth Reports</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadReport()">🔄 Refresh</button>
+    </header>
+    <div class="admin-content">
+      <div id="reportStats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px"></div>
+      <div id="reportChart"></div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadReport();
+}
+async function loadReport() {
+  document.getElementById('reportStats').innerHTML = '<div class="flex-center" style="padding:20px;grid-column:1/-1"><div class="spinner"></div></div>';
+  document.getElementById('reportChart').innerHTML = '';
+  try {
+    const res = await API.getGrowthReport();
+    const r = res?.report || res || {};
+
+    const stats = [
+      { label: 'Total Members', value: r.total_members ?? '—', icon: '👥', color: 'var(--primary)' },
+      { label: 'Active This Month', value: r.active_this_month ?? '—', icon: '✅', color: 'var(--success)' },
+      { label: 'New This Month', value: r.new_this_month ?? '—', icon: '🆕', color: 'var(--gold)' },
+      { label: 'Pending Approval', value: r.pending ?? '—', icon: '⏳', color: 'var(--warning)' },
+      { label: 'Total Testimonies', value: r.total_testimonies ?? '—', icon: '✨', color: 'var(--info)' },
+      { label: 'Prayer Requests', value: r.total_prayers ?? '—', icon: '🙏', color: 'var(--primary)' },
+    ];
+    document.getElementById('reportStats').innerHTML = stats.map(s => `
+      <div class="card" style="text-align:center;border-top:3px solid ${s.color}">
+        <div style="font-size:28px;margin-bottom:4px">${s.icon}</div>
+        <div style="font-size:28px;font-weight:900;color:${s.color}">${s.value}</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:4px">${s.label}</div>
+      </div>`).join('');
+
+    if (r.monthly_growth?.length) {
+      document.getElementById('reportChart').innerHTML = `
+        <div class="card">
+          <div style="font-weight:700;font-size:16px;color:var(--primary);margin-bottom:20px">📈 Monthly Member Growth</div>
+          <div class="simple-bar">
+            ${r.monthly_growth.map(m => {
+              const maxVal = Math.max(...r.monthly_growth.map(x => x.count || 0)) || 1;
+              const h = Math.round((m.count / maxVal) * 100);
+              return `<div class="bar-item"><div class="bar-value">${m.count}</div><div class="bar-fill" style="height:${h}px"></div><div class="bar-label">${m.month}</div></div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }
+  } catch(e) { document.getElementById('reportStats').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger)">Error loading reports</div>'; }
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
 </body>
 </html>
