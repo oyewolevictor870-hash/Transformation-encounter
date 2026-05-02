@@ -1,11 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Livestream | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-    <p>comming soon</p>
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/polls.html" class="admin-nav-link"><span class="nav-icon">🗳️</span> Polls</a>
+      <a href="/admin/events.html" class="admin-nav-link"><span class="nav-icon">📅</span> Events</a>
+      <a href="/admin/logs.html" class="admin-nav-link"><span class="nav-icon">📋</span> Action Logs</a>
+      <a href="/admin/reports.html" class="admin-nav-link"><span class="nav-icon">📈</span> Reports</a>
+      <a href="/admin/visitors-contact.html" class="admin-nav-link"><span class="nav-icon">📬</span> Visitor Messages</a>
+      <a href="/admin/content.html" class="admin-nav-link"><span class="nav-icon">🗂️</span> Content</a>
+      <a href="/admin/livestream.html" class="admin-nav-link active"><span class="nav-icon">🎥</span> Livestream</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+        <div class="admin-page-title">🎥 Livestream Control</div>
+      </div>
+    </header>
+    <div class="admin-content" style="max-width:680px">
+      <div class="card" style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div id="liveIndicator" style="width:14px;height:14px;border-radius:50%;background:var(--gray-300)"></div>
+          <div style="font-weight:700;font-size:16px;color:var(--primary)" id="liveStatus">Loading...</div>
+        </div>
+        <div class="form-group"><label class="form-label">Stream Title</label><input class="form-control" id="lsTitle" placeholder="e.g. Sunday Morning Service"></div>
+        <div class="form-group"><label class="form-label">YouTube / Stream URL *</label><input class="form-control" id="lsUrl" placeholder="https://youtube.com/watch?v=..."></div>
+        <div class="form-group"><label class="form-label">Description (optional)</label><textarea class="form-control" id="lsDesc" rows="2" placeholder="Brief description of the service..."></textarea></div>
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <button class="btn btn-primary" style="flex:1" onclick="goLive()">🔴 Go Live</button>
+          <button class="btn btn-danger" onclick="endLive()">⏹ End Stream</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:12px">📋 How to go live:</div>
+        <ol style="font-size:13px;color:var(--gray-700);line-height:2;padding-left:20px">
+          <li>Start your stream on YouTube, Facebook, or your platform of choice</li>
+          <li>Copy the stream/watch URL once it's live</li>
+          <li>Paste it in the URL field above and click <strong>Go Live</strong></li>
+          <li>Members will see a live indicator and can join from their dashboard</li>
+          <li>When finished, click <strong>End Stream</strong> to take it offline</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin', 'worker']))) return;
+  loadStatus();
+}
+async function loadStatus() {
+  try {
+    const res = await API.getLiveStream();
+    const ls = res?.livestream || res;
+    if (ls?.is_live) {
+      document.getElementById('liveIndicator').style.background = 'var(--success)';
+      document.getElementById('liveIndicator').style.boxShadow = '0 0 8px rgba(34,197,94,0.6)';
+      document.getElementById('liveStatus').textContent = '🔴 Currently Live';
+      document.getElementById('liveStatus').style.color = 'var(--success)';
+      if (ls.title) document.getElementById('lsTitle').value = ls.title;
+      if (ls.url) document.getElementById('lsUrl').value = ls.url;
+      if (ls.description) document.getElementById('lsDesc').value = ls.description;
+    } else {
+      document.getElementById('liveStatus').textContent = '⏹ Stream is Offline';
+    }
+  } catch(e) { document.getElementById('liveStatus').textContent = 'Could not load status'; }
+}
+async function goLive() {
+  const url = document.getElementById('lsUrl').value.trim();
+  if (!url) return Toast.error('Please enter a stream URL');
+  const data = { is_live: true, url, title: document.getElementById('lsTitle').value.trim(), description: document.getElementById('lsDesc').value.trim() };
+  const res = await API.put('/admin/livestream', data);
+  if (res?.success) { Toast.success('You are now live! 🔴 Members have been notified.'); loadStatus(); }
+  else Toast.error(res?.message || 'Error going live');
+}
+async function endLive() {
+  if (!confirm('End the livestream? Members will see it as offline.')) return;
+  const res = await API.put('/admin/livestream', { is_live: false });
+  if (res?.success) { Toast.success('Stream ended.'); document.getElementById('lsUrl').value = ''; loadStatus(); }
+  else Toast.error(res?.message || 'Error ending stream');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
 </body>
 </html>
