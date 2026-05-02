@@ -280,9 +280,9 @@ if (window) window.Toast = Toast;
 if (window) window.Utils = Utils;
 if (window) window.Modal = Modal;
 
-// Admin sidebar overlay — auto-close when tapping outside
+// Sidebar overlay — works for both admin and member pages
 document.addEventListener('DOMContentLoaded', () => {
-    const sidebar = document.getElementById('adminSidebar');
+    const sidebar = document.getElementById('adminSidebar') || document.getElementById('sidebar');
     if (!sidebar) return;
     const overlay = document.createElement('div');
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999';
