@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forgot Password | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css">
+<style>
+  body { background: linear-gradient(135deg, #1A0F45 0%, #2D1B69 50%, #4A2D9A 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-card { background: white; border-radius: 24px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .back-link { text-align: center; margin-top: 16px; font-size: 13px; }
+  .back-link a { color: white; opacity: 0.7; }
+</style>
+</head>
+<body>
+<div>
+  <div class="auth-card">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px">🔥</div>
+      <h1 style="font-size:20px;font-weight:800;color:var(--primary);margin-top:8px">Forgot Password</h1>
+      <p style="font-size:13px;color:var(--gray-500)">Enter your email and we'll send you a reset link</p>
+    </div>
+    <div id="alertBox"></div>
+    <div id="formSection">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="email" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" id="submitBtn" onclick="requestReset()">Send Reset Link</button>
+    </div>
+    <div style="text-align:center;margin-top:24px;font-size:13px;color:var(--gray-500)">
+      Remembered it? <a href="/login.html" style="color:var(--primary);font-weight:700">Back to Login</a>
+    </div>
+  </div>
+  <div class="back-link"><a href="/">← Back to Home</a></div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+async function requestReset() {
+  const email = document.getElementById('email').value.trim();
+  const btn = document.getElementById('submitBtn');
+  const alertBox = document.getElementById('alertBox');
+  alertBox.innerHTML = '';
+  if (!email) { alertBox.innerHTML = '<div class="alert alert-danger">Please enter your email address.</div>'; return; }
+  btn.textContent = 'Sending...'; btn.disabled = true;
+  const res = await API.post('/auth/forgot-password', { email });
+  if (res?.success) {
+    document.getElementById('formSection').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:16px">📧</div>
+        <div style="font-weight:700;font-size:18px;color:var(--primary);margin-bottom:8px">Check your inbox!</div>
+        <p style="font-size:14px;color:var(--gray-500);line-height:1.6">If <strong>${email}</strong> is registered, a password reset link has been sent. Check your email and follow the instructions.<br><br>The link expires in <strong>1 hour</strong>.</p>
+        <a href="/login.html" class="btn btn-outline" style="margin-top:16px">Back to Login</a>
+      </div>`;
+  } else {
+    alertBox.innerHTML = `<div class="alert alert-danger">${res?.message || 'Something went wrong. Try again.'}</div>`;
+    btn.textContent = 'Send Reset Link'; btn.disabled = false;
+  }
+}
+document.getElementById('email').addEventListener('keydown', e => { if (e.key === 'Enter') requestReset(); });
+</script>
+</body>
+</html>
