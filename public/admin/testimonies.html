@@ -23,7 +23,7 @@
   </aside>
   <div class="admin-main">
     <header class="admin-topbar">
-      <div class="admin-page-title">✨ Testimony Management</div>
+      <div style="display:flex;align-items:center;gap:16px"><button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button><div class="admin-page-title">✨ Testimony Management</div></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" onclick="loadTestimonies('pending')">⏳ Pending</button>
         <button class="btn btn-outline btn-sm" onclick="loadTestimonies('approved')">✅ Approved</button>
