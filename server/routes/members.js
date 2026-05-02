@@ -42,7 +42,7 @@ router.put('/profile', authenticate, upload.single('photo'), async (req, res) =>
         const { full_name, bio, phone, birthday, salvation_date, whatsapp_number, dark_mode, department } = req.body;
         const profile_photo = req.file ? `/uploads/profiles/${req.file.filename}` : undefined;
         const fields = ['full_name=$2', 'bio=$3', 'phone=$4', 'birthday=$5', 'salvation_date=$6', 'whatsapp_number=$7', 'dark_mode=$8', 'department=$9'];
-        const values = [req.user.id, full_name, bio, phone, birthday || null, salvation_date || null, whatsapp_number, dark_mode];
+        const values = [req.user.id, full_name, bio, phone, birthday || null, salvation_date || null, whatsapp_number, dark_mode, department || null];
         if (profile_photo) { fields.push(`profile_photo=$${values.length + 1}`); values.push(profile_photo); }
         await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id=$1`, values);
         res.json({ success: true, message: 'Profile updated.' });
