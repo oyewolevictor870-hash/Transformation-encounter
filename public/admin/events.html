@@ -1,11 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Events | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-    
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/polls.html" class="admin-nav-link"><span class="nav-icon">🗳️</span> Polls</a>
+      <a href="/admin/events.html" class="admin-nav-link active"><span class="nav-icon">📅</span> Events</a>
+      <a href="/admin/logs.html" class="admin-nav-link"><span class="nav-icon">📋</span> Action Logs</a>
+      <a href="/admin/reports.html" class="admin-nav-link"><span class="nav-icon">📈</span> Reports</a>
+      <a href="/admin/visitors-contact.html" class="admin-nav-link"><span class="nav-icon">📬</span> Visitor Messages</a>
+      <a href="/admin/content.html" class="admin-nav-link"><span class="nav-icon">🗂️</span> Content</a>
+      <a href="/admin/livestream.html" class="admin-nav-link"><span class="nav-icon">🎥</span> Livestream</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+        <div class="admin-page-title">📅 Events Management</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="Modal.open('createEventModal')">+ Create Event</button>
+    </header>
+    <div class="admin-content">
+      <div id="eventsList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE EVENT MODAL -->
+<div class="modal-overlay" id="createEventModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><div class="modal-title">📅 Create New Event</div><button class="modal-close">✕</button></div>
+    <div class="form-group"><label class="form-label">Event Title *</label><input class="form-control" id="evTitle" placeholder="e.g. Annual Thanksgiving Service"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="evDesc" rows="3" placeholder="Brief description of the event..."></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-control" id="evDate"></div>
+      <div class="form-group"><label class="form-label">Time</label><input type="time" class="form-control" id="evTime"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Location</label><input class="form-control" id="evLocation" placeholder="e.g. Main Auditorium / Zoom Link"></div>
+    <div class="form-group"><label class="form-label">Category</label>
+      <select class="form-control" id="evCategory">
+        <option value="service">Church Service</option>
+        <option value="prayer">Prayer Meeting</option>
+        <option value="outreach">Outreach</option>
+        <option value="conference">Conference</option>
+        <option value="youth">Youth Program</option>
+        <option value="workers">Workers Meeting</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Flyer Image (optional)</label><input type="file" class="form-control" id="evFlyer" accept="image/*"></div>
+    <div style="display:flex;gap:12px;margin-top:4px">
+      <button class="btn btn-outline" onclick="Modal.close('createEventModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="createEvent()">Create Event</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin', 'worker']))) return;
+  loadEvents();
+}
+async function loadEvents() {
+  const container = document.getElementById('eventsList');
+  try {
+    const res = await API.getEvents();
+    const events = res?.events || [];
+    if (!events.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">📅</div><h3>No events yet</h3><p>Create your first event to get started</p></div>';
+      return;
+    }
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">` +
+      events.map(e => `<div class="card" style="position:relative">
+        ${e.flyer_url ? `<img src="${e.flyer_url}" style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:12px">` : `<div style="height:80px;background:linear-gradient(135deg,var(--primary),var(--primary-light));border-radius:6px;margin-bottom:12px;display:flex;align-items:center;justify-content:center;font-size:32px">📅</div>`}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:4px">${e.title}</div>
+            <div style="font-size:12px;color:var(--gray-500)">📅 ${Utils.formatDate(e.event_date)}${e.event_time ? ' at ' + e.event_time : ''}</div>
+            ${e.location ? `<div style="font-size:12px;color:var(--gray-500)">📍 ${e.location}</div>` : ''}
+            ${e.category ? `<div style="margin-top:6px"><span class="badge badge-primary">${e.category}</span></div>` : ''}
+            ${e.rsvp_count ? `<div style="font-size:12px;color:var(--success);margin-top:4px">✅ ${e.rsvp_count} RSVP(s)</div>` : ''}
+          </div>
+          <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="deleteEvent('${e.id}')">🗑️</button>
+        </div>
+      </div>`).join('') + `</div>`;
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading events</div>'; }
+}
+async function createEvent() {
+  const title = document.getElementById('evTitle').value.trim();
+  const date = document.getElementById('evDate').value;
+  if (!title || !date) return Toast.error('Title and date are required');
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('description', document.getElementById('evDesc').value);
+  fd.append('event_date', date);
+  fd.append('event_time', document.getElementById('evTime').value);
+  fd.append('location', document.getElementById('evLocation').value);
+  fd.append('category', document.getElementById('evCategory').value);
+  const flyer = document.getElementById('evFlyer').files[0];
+  if (flyer) fd.append('flyer', flyer);
+  const res = await API.createEvent(fd);
+  if (res?.success) { Toast.success('Event created! 📅'); Modal.close('createEventModal'); loadEvents(); }
+  else Toast.error(res?.message || 'Error creating event');
+}
+async function deleteEvent(id) {
+  if (!confirm('Delete this event permanently?')) return;
+  const res = await API.delete(`/events/${id}`);
+  if (res?.success) { Toast.success('Event deleted.'); loadEvents(); }
+  else Toast.error(res?.message || 'Error');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
 </body>
 </html>
