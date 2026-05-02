@@ -713,7 +713,7 @@
         left: -200px;
     }
 
-    .admin-sidebar.active {
+    .admin-sidebar.open {
         left: 0;
         width: 200px;
     }
