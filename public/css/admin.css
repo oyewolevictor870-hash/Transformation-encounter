@@ -613,7 +613,7 @@
         transform: translateX(-100%);
     }
 
-    .admin-sidebar.active{
+    .admin-sidebar.open{
         left: 0;
     }
 
