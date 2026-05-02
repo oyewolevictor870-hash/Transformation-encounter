@@ -279,6 +279,27 @@ if (window) window.API = API;
 if (window) window.Toast = Toast;
 if (window) window.Utils = Utils;
 if (window) window.Modal = Modal;
+// Admin sidebar overlay — auto-close when tapping outside
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('adminSidebar');
+    if (!sidebar) return;
+
+    // Create dark overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999';
+    document.body.appendChild(overlay);
+
+    // Close sidebar when overlay is tapped
+    overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.style.display = 'none';
+    });
+
+    // Watch sidebar class changes to show/hide overlay
+    new MutationObserver(() => {
+        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+    }).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+});
 // const API = {
 //     baseUrl: '/api',
 
