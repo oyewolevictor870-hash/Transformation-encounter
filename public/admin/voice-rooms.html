@@ -22,7 +22,7 @@
     <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)"><a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a></div>
   </aside>
   <div class="admin-main">
-    <header class="admin-topbar"><div class="admin-page-title">📻 Voice Room Control</div><button class="btn btn-primary btn-sm" onclick="Modal.open('createRoomModal')">+ Open New Room</button></header>
+    <header class="admin-topbar"><div style="display:flex;align-items:center;gap:16px"><button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button><div class="admin-page-title">📻 Voice Room Control</div></div>
     <div class="admin-content">
       <div class="alert alert-info">When you open a prayer room, all members will be notified via in-app notification and can join immediately. You can close rooms at any time.</div>
       <div id="roomsList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
