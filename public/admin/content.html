@@ -1,11 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Management | Admin | Transformation Encounter</title>
+<link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-   <p>coming soon</p> 
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-header"><div style="font-size:24px">🔥</div><div class="admin-sidebar-title">Admin Panel</div><div class="admin-sidebar-subtitle">Transformation Encounter</div></div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav-link"><span class="nav-icon">📊</span> Overview</a>
+      <a href="/admin/members.html" class="admin-nav-link"><span class="nav-icon">👥</span> Members</a>
+      <a href="/admin/approvals.html" class="admin-nav-link"><span class="nav-icon">⏳</span> Pending Approvals</a>
+      <a href="/admin/financials.html" class="admin-nav-link"><span class="nav-icon">💰</span> Financials</a>
+      <a href="/admin/testimonies.html" class="admin-nav-link"><span class="nav-icon">✨</span> Testimonies</a>
+      <a href="/admin/notifications.html" class="admin-nav-link"><span class="nav-icon">📣</span> Notifications</a>
+      <a href="/admin/voice-rooms.html" class="admin-nav-link"><span class="nav-icon">📻</span> Voice Rooms</a>
+      <a href="/admin/polls.html" class="admin-nav-link"><span class="nav-icon">🗳️</span> Polls</a>
+      <a href="/admin/events.html" class="admin-nav-link"><span class="nav-icon">📅</span> Events</a>
+      <a href="/admin/logs.html" class="admin-nav-link"><span class="nav-icon">📋</span> Action Logs</a>
+      <a href="/admin/reports.html" class="admin-nav-link"><span class="nav-icon">📈</span> Reports</a>
+      <a href="/admin/visitors-contact.html" class="admin-nav-link"><span class="nav-icon">📬</span> Visitor Messages</a>
+      <a href="/admin/content.html" class="admin-nav-link active"><span class="nav-icon">🗂️</span> Content</a>
+      <a href="/admin/livestream.html" class="admin-nav-link"><span class="nav-icon">🎥</span> Livestream</a>
+      <a href="/admin/settings.html" class="admin-nav-link"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)">
+      <a href="/member/dashboard.html" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">↩️</span> Member View</a>
+      <a href="#" onclick="logout()" class="admin-nav-link" style="padding:8px 0"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button style="background:none;border:none;font-size:20px;cursor:pointer" onclick="document.getElementById('adminSidebar').classList.toggle('open')">☰</button>
+        <div class="admin-page-title">🗂️ Content Management</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select class="form-control" id="contentType" style="width:160px" onchange="loadContent()">
+          <option value="feed">📰 Feed Posts</option>
+          <option value="sermons">🎙️ Sermons</option>
+          <option value="prayers">🙏 Prayers</option>
+        </select>
+      </div>
+    </header>
+    <div class="admin-content">
+      <div class="alert alert-warning">⚠️ Deleting content here is permanent and cannot be undone.</div>
+      <div class="admin-table-wrapper">
+        <div id="contentList"><div class="flex-center" style="padding:60px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script>
+async function init() {
+  if (!(await Utils.requireRole(['admin']))) return;
+  loadContent();
+}
+async function loadContent() {
+  const type = document.getElementById('contentType').value;
+  const container = document.getElementById('contentList');
+  container.innerHTML = '<div class="flex-center" style="padding:40px"><div class="spinner"></div></div>';
+  try {
+    let res, items = [];
+    if (type === 'feed') { res = await API.getFeed({}); items = res?.posts || []; }
+    else if (type === 'sermons') { res = await API.getSermons({}); items = res?.sermons || []; }
+    else if (type === 'prayers') { res = await API.getAllPrayers(); items = res?.prayers || []; }
+
+    if (!items.length) {
+      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--gray-500)">No ${type} content found</div>`;
+      return;
+    }
+    container.innerHTML = `<table class="admin-table">
+      <thead><tr><th>Content</th><th>Author</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>${items.map(item => {
+        const title = item.title || item.content?.slice(0, 60) || item.request?.slice(0, 60) || '—';
+        const author = item.full_name || item.author_name || '—';
+        return `<tr>
+          <td style="max-width:350px;font-size:13px">${title}${title.length >= 60 ? '...' : ''}</td>
+          <td>${author}</td>
+          <td style="font-size:12px;white-space:nowrap">${Utils.formatDate(item.created_at)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteItem('${type}','${item.id}')">🗑️ Delete</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Error loading content</div>'; }
+}
+async function deleteItem(table, id) {
+  if (!confirm('Permanently delete this content?')) return;
+  const res = await API.deleteContent(table, id);
+  if (res?.success) { Toast.success('Content deleted.'); loadContent(); }
+  else Toast.error(res?.message || 'Error deleting content');
+}
+function logout() { API.clearSession(); window.location.href = '/login.html'; }
+init();
+</script>
 </body>
 </html>
