@@ -148,6 +148,14 @@ router.post('/notify/all', adminOnly, async (req, res) => {
 });
 
 // Voice room control
+router.get('/voice-rooms', authenticate, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM voice_rooms WHERE is_active = true ORDER BY started_at DESC');
+        res.json({ success: true, rooms: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 router.post('/voice-room/toggle', adminOnly, async (req, res) => {
     try {
         const { type, action } = req.body;
