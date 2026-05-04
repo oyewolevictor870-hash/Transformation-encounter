@@ -78,7 +78,7 @@ async function init() {
   document.getElementById('sidebarName').textContent = currentUser.full_name;
   document.getElementById('sidebarAvatar').textContent = Utils.initials(currentUser.full_name);
 
-  socket = io();
+  socket = io('https://transformation-encounter-production.up.railway.app');
   socket.emit('user:join', currentUser.id);
 
   socket.on('voice:user-joined', async ({ userId, socketId }) => {
